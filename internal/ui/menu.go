@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"time"
 
-	//	"github.com/fortifyde/netutil/internal/scripts"
+	"github.com/fortifyde/netutil/internal/functions"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
@@ -19,6 +19,7 @@ var (
 
 func RunApp() error {
 	app := tview.NewApplication()
+	var mainFlex *tview.Flex
 
 	// Set default colors
 	tview.Styles.PrimitiveBackgroundColor = nordBg
@@ -63,22 +64,33 @@ func RunApp() error {
 		SetSelectedBackgroundColor(nordHighlight).
 		SetMainTextColor(nordFg)
 
-	categories := []string{"Category 1", "Category 2", "Category 3", "Category 4", "Category 5"}
+	categories := []string{"System Configuration", "Category 2", "Category 3", "Category 4", "Category 5"}
 	categoryContents := make(map[string][]string)
+
+	// Define functions for the "System Configuration" category
+	categoryContents["System Configuration"] = []string{"Check and toggle interfaces", "Function 2", "Function 3"}
 
 	for _, category := range categories {
 		menu.AddItem(category, "", 0, nil)
-		functions := []string{}
-		for j := 1; j <= 3; j++ {
-			functions = append(functions, fmt.Sprintf("Function %d", j))
+		if category != "System Configuration" {
+			functions := []string{}
+			for j := 1; j <= 3; j++ {
+				functions = append(functions, fmt.Sprintf("Function %d", j))
+			}
+			categoryContents[category] = functions
 		}
-		categoryContents[category] = functions
 	}
 
 	updateOutputBox := func(category string) {
 		outputBox.Clear()
 		for _, function := range categoryContents[category] {
-			outputBox.AddItem(function, "", 0, nil)
+			outputBox.AddItem(function, "", 0, func() {
+				if function == "Check and toggle interfaces" {
+					functions.ToggleEthernetInterfaces(app, mainFlex)
+				} else {
+					showMessage(app, fmt.Sprintf("Function '%s' not implemented yet", function))
+				}
+			})
 		}
 	}
 
@@ -98,7 +110,7 @@ func RunApp() error {
 			"[%s]Movement:[-]                         [%s]Other:[-]\n"+
 			"[%s]h, ←[-]: Focus menu                  [%s]q, Ctrl+C[-]: Exit NetUtil\n"+
 			"[%s]l, →[-]: Focus functions             [%s]d[-]        : Function description\n"+
-			"[%s]k, ↑[-]: Select item above\n"+
+			"[%s]k, ↑[-]: Select item above           [%s]/[-]        : Search\n"+
 			"[%s]j, ↓[-]: Select item below",
 			nordHighlight.String(),
 			nordHighlight.String(),
@@ -107,7 +119,8 @@ func RunApp() error {
 			nordAccent.String(),
 			nordAccent.String(),
 			nordAccent.String(),
-			nordAccent.String())) // Added this line
+			nordAccent.String(),
+			nordAccent.String()))
 	cmdInfoBox.SetBorder(true).SetTitle("Command List").SetTitleAlign(tview.AlignLeft)
 
 	// Layout
@@ -122,7 +135,7 @@ func RunApp() error {
 	bottomFlex := tview.NewFlex().
 		AddItem(cmdInfoBox, 0, 1, false)
 
-	mainFlex := tview.NewFlex().SetDirection(tview.FlexRow).
+	mainFlex = tview.NewFlex().SetDirection(tview.FlexRow).
 		AddItem(topFlex, 3, 1, false).
 		AddItem(middleFlex, 0, 1, true).
 		AddItem(bottomFlex, 7, 1, false)
@@ -130,4 +143,16 @@ func RunApp() error {
 	SetupKeyboardControls(app, menu, outputBox)
 
 	return app.SetRoot(mainFlex, true).Run()
+}
+
+// Add this helper function at the end of the file
+func showMessage(app *tview.Application, message string) {
+	modal := tview.NewModal().
+		SetText(message).
+		AddButtons([]string{"OK"}).
+		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
+			app.SetRoot(app.GetFocus(), true)
+		})
+
+	app.SetRoot(modal, false).SetFocus(modal)
 }
