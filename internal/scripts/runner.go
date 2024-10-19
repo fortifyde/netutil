@@ -8,6 +8,7 @@ import (
 )
 
 func RunBashScript(scriptPath string, outputBox *tview.TextView) {
+	outputBox.SetText("Running script: " + scriptPath + "\n") // Placeholder message
 	cmd := exec.Command("bash", scriptPath)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
