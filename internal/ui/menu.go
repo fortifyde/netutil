@@ -68,7 +68,7 @@ func RunApp() error {
 	categoryContents := make(map[string][]string)
 
 	// Define functions for the "System Configuration" category
-	categoryContents["System Configuration"] = []string{"Check and toggle interfaces", "Function 2", "Function 3"}
+	categoryContents["System Configuration"] = []string{"Check and toggle interfaces", "Edit Working Directory", "Function 3"}
 
 	for _, category := range categories {
 		menu.AddItem(category, "", 0, nil)
@@ -85,9 +85,14 @@ func RunApp() error {
 		outputBox.Clear()
 		for _, function := range categoryContents[category] {
 			outputBox.AddItem(function, "", 0, func() {
-				if function == "Check and toggle interfaces" {
+				switch function {
+				case "Check and toggle interfaces":
 					functions.ToggleEthernetInterfaces(app, mainFlex)
-				} else {
+				case "Edit Working Directory":
+					if err := functions.EditWorkingDirectory(app, mainFlex); err != nil {
+						showMessage(app, fmt.Sprintf("Error: %s", err))
+					}
+				default:
 					showMessage(app, fmt.Sprintf("Function '%s' not implemented yet", function))
 				}
 			})

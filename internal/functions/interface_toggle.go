@@ -50,6 +50,10 @@ func toggleSingleInterface(app *tview.Application, iface net.Interface, mainView
 }
 
 func showInterfaceList(app *tview.Application, interfaces []net.Interface, mainView tview.Primitive) {
+	if uiutil.IsFloatingBoxActive {
+		return
+	}
+
 	list := tview.NewList().
 		ShowSecondaryText(false).
 		SetHighlightFullLine(true).
@@ -64,63 +68,43 @@ func showInterfaceList(app *tview.Application, interfaces []net.Interface, mainV
 		status, _ := getInterfaceStatus(iface.Name)
 		list.AddItem(fmt.Sprintf("%s (%s)", iface.Name, status), "", 0, nil)
 	}
-
-	list.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		switch event.Key() {
-		case tcell.KeyEnter:
-			index := list.GetCurrentItem()
-			if index < len(interfaces) {
-				toggleInterface(app, interfaces[index].Name, mainView)
-			} else {
-				uiutil.IsFloatingBoxActive = false
-				app.SetRoot(mainView, true)
-				if outputBox, ok := mainView.(*tview.Flex).GetItem(1).(*tview.Flex).GetItem(1).(*tview.List); ok {
-					app.SetFocus(outputBox)
-				}
-			}
-			return nil
-		case tcell.KeyEscape:
-			uiutil.IsFloatingBoxActive = false
-			app.SetRoot(mainView, true)
-			if outputBox, ok := mainView.(*tview.Flex).GetItem(1).(*tview.Flex).GetItem(1).(*tview.List); ok {
-				app.SetFocus(outputBox)
-			}
-			return nil
-		}
-		return event
-	})
-
 	list.AddItem("Cancel", "", 0, func() {
-		uiutil.IsFloatingBoxActive = false
-		app.SetRoot(mainView, true)
-		if outputBox, ok := mainView.(*tview.Flex).GetItem(1).(*tview.Flex).GetItem(1).(*tview.List); ok {
-			app.SetFocus(outputBox)
-		}
+		uiutil.CloseFloatingBox(app, mainView)
 	})
 
 	// Calculate dynamic size
-	width := 40                   // Minimum width
-	height := len(interfaces) + 4 // +4 for title, border, and Cancel option
+	width := 40
+	height := len(interfaces) + 4
 
 	for _, iface := range interfaces {
-		if len(iface.Name)+10 > width { // +10 for status and padding
+		if len(iface.Name)+10 > width {
 			width = len(iface.Name) + 10
 		}
 	}
 
-	// Create the floating box without showing it
-	floatingBox := uiutil.FloatingBox(list, width, height)
+	list.SetSelectedFunc(func(index int, mainText, secondaryText string, shortcut rune) {
+		if index < len(interfaces) {
+			toggleInterface(app, interfaces[index].Name, mainView)
+		}
+	})
 
-	// Create a new page with the floating box
+	floatingBox := uiutil.FloatingBox(list, width, height)
 	page := tview.NewPages().
 		AddPage("background", mainView, true, true).
 		AddPage("floating", floatingBox, true, true)
 
-	// Set the root of the application to the new page
-	app.SetRoot(page, true).SetFocus(list)
-
-	// Set IsFloatingBoxActive to true
+	list.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+		switch event.Key() {
+		case tcell.KeyEscape, tcell.KeyRune:
+			if event.Rune() == 'q' {
+				uiutil.CloseFloatingBox(app, mainView)
+				return nil
+			}
+		}
+		return event
+	})
 	uiutil.IsFloatingBoxActive = true
+	app.SetRoot(page, true).SetFocus(list)
 }
 
 func toggleInterface(app *tview.Application, name string, mainView tview.Primitive) {
@@ -137,7 +121,7 @@ func toggleInterface(app *tview.Application, name string, mainView tview.Primiti
 
 	err = setInterfaceStatus(name, newStatus)
 	if err != nil {
-		uiutil.ShowError(app, fmt.Sprintf("Error setting interface %s to %s: %s", name, newStatus, err.Error()), mainView)
+		uiutil.ShowError(app, fmt.Sprintf("Error setting interface %s to %s: %s\n\n[red]root access needed!\n", name, newStatus, err.Error()), mainView)
 	} else {
 		uiutil.ShowMessage(app, fmt.Sprintf("Interface %s has been set to %s.", name, newStatus), mainView)
 	}

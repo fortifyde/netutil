@@ -19,23 +19,17 @@ func FloatingBox(content tview.Primitive, width, height int) *tview.Flex {
 }
 
 // ShowFloatingBox displays a centered, floating box over the current application view
-func ShowFloatingBox(app *tview.Application, content tview.Primitive, width, height int, mainView tview.Primitive, keepMainViewVisible bool) {
+func ShowFloatingBox(app *tview.Application, content tview.Primitive, width, height int, mainView tview.Primitive, keepMainViewVisible bool) *tview.Pages {
 	IsFloatingBoxActive = true
 	floatingBox := FloatingBox(content, width, height)
 	page := tview.NewPages().
 		AddPage("background", mainView, true, keepMainViewVisible).
 		AddPage("floating", floatingBox, true, true)
 
-	app.SetRoot(page, true).SetFocus(content)
-
 	page.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Key() {
 		case tcell.KeyEscape:
-			IsFloatingBoxActive = false
-			app.SetRoot(mainView, true)
-			if outputBox, ok := mainView.(*tview.Flex).GetItem(1).(*tview.Flex).GetItem(1).(*tview.List); ok {
-				app.SetFocus(outputBox)
-			}
+			CloseFloatingBox(app, mainView)
 			return nil
 		case tcell.KeyUp, tcell.KeyDown, tcell.KeyLeft, tcell.KeyRight:
 			return event
@@ -52,11 +46,7 @@ func ShowFloatingBox(app *tview.Application, content tview.Primitive, width, hei
 		case 'l':
 			return tcell.NewEventKey(tcell.KeyRight, 0, tcell.ModNone)
 		case 'q':
-			IsFloatingBoxActive = false
-			app.SetRoot(mainView, true)
-			if outputBox, ok := mainView.(*tview.Flex).GetItem(1).(*tview.Flex).GetItem(1).(*tview.List); ok {
-				app.SetFocus(outputBox)
-			}
+			CloseFloatingBox(app, mainView)
 			return nil
 		}
 
@@ -68,4 +58,19 @@ func ShowFloatingBox(app *tview.Application, content tview.Primitive, width, hei
 		}
 		return event
 	})
+
+	return page
+}
+
+// CloseFloatingBox closes the floating box and returns focus to the output box
+func CloseFloatingBox(app *tview.Application, mainView tview.Primitive) {
+	IsFloatingBoxActive = false
+	app.SetRoot(mainView, true)
+	if flex, ok := mainView.(*tview.Flex); ok {
+		if middleFlex, ok := flex.GetItem(1).(*tview.Flex); ok {
+			if outputBox, ok := middleFlex.GetItem(1).(*tview.List); ok {
+				app.SetFocus(outputBox)
+			}
+		}
+	}
 }
