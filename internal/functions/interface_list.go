@@ -1,9 +1,16 @@
 package functions
 
 import (
+	"fmt"
 	"net"
+	"os/exec"
+	"regexp"
 	"strings"
 )
+
+// Retrieves all Ethernet interfaces on the system.
+// Filters out wireless interfaces and subinterfaces.
+// Separate function to retrieve subinterfaces of a given interface.
 
 func GetEthernetInterfaces() ([]net.Interface, error) {
 	allInterfaces, err := net.Interfaces()
@@ -37,5 +44,36 @@ func isWiredEthernetInterface(name string) bool {
 }
 
 func isSubinterface(name string) bool {
-	return strings.Contains(name, ".") || strings.Contains(name, ":")
+	re := regexp.MustCompile(`\.\d+(@.*)?$`)
+	return re.MatchString(name)
+}
+
+func GetSubinterfaces(ifaceName string) ([]string, error) {
+	cmd := exec.Command("ip", "-o", "link", "show")
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("failed to get subinterfaces: %v", err)
+	}
+
+	var subinterfaces []string
+	lines := strings.Split(string(output), "\n")
+	for _, line := range lines {
+		fields := strings.Fields(line)
+		if len(fields) < 2 {
+			continue
+		}
+		fullSubName := strings.TrimRight(fields[1], ":")
+		if isSubinterfaceOf(fullSubName, ifaceName) {
+			subName := strings.Split(fullSubName, "@")[0]
+			subinterfaces = append(subinterfaces, subName)
+		}
+	}
+
+	return subinterfaces, nil
+}
+
+func isSubinterfaceOf(subName, parentName string) bool {
+	pattern := fmt.Sprintf(`^%s\.\d+(@%s)?$`, regexp.QuoteMeta(parentName), regexp.QuoteMeta(parentName))
+	match, _ := regexp.MatchString(pattern, subName)
+	return match
 }

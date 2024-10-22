@@ -6,111 +6,83 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/fortifyde/netutil/internal/logger"
 	"github.com/fortifyde/netutil/internal/uiutil"
-	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
 
-func ToggleEthernetInterfaces(app *tview.Application, mainView tview.Primitive) {
+// Functions to handle toggling of Ethernet interfaces.
+// Retrieves all Ethernet interfaces and either toggles a single interface or
+// shows a list of interfaces to choose from. Toggling of a single enabled
+// interface will prompt for confirmation disable it.
+
+func ToggleEthernetInterfaces(app *tview.Application, pages *tview.Pages, mainView tview.Primitive) {
+	logger.Info("Toggling Ethernet interfaces")
 	interfaces, err := GetEthernetInterfaces()
 	if err != nil {
-		uiutil.ShowError(app, "Error getting interfaces: "+err.Error(), mainView)
+		logger.Error("Failed to get Ethernet interfaces: %v", err)
+		uiutil.ShowError(app, pages, "Error getting interfaces: "+err.Error(), mainView)
 		return
 	}
 
 	if len(interfaces) == 0 {
-		uiutil.ShowMessage(app, "No Ethernet interfaces found.", mainView)
+		logger.Info("No Ethernet interfaces found")
+		uiutil.ShowMessage(app, pages, "No Ethernet interfaces found.", mainView)
 		return
 	}
 
 	if len(interfaces) == 1 {
-		toggleSingleInterface(app, interfaces[0], mainView)
+		toggleSingleInterface(app, pages, interfaces[0], mainView)
 	} else {
-		showInterfaceList(app, interfaces, mainView)
+		showInterfaceList(app, pages, interfaces, mainView)
 	}
 }
 
-func toggleSingleInterface(app *tview.Application, iface net.Interface, mainView tview.Primitive) {
+func toggleSingleInterface(app *tview.Application, pages *tview.Pages, iface net.Interface, mainView tview.Primitive) {
+	logger.Info("Attempting to toggle single interface: %s", iface.Name)
 	status, err := getInterfaceStatus(iface.Name)
 	if err != nil {
-		uiutil.ShowError(app, "Error getting interface status: "+err.Error(), mainView)
+		logger.Error("Failed to get status for interface %s: %v", iface.Name, err)
+		uiutil.ShowError(app, pages, "Error getting interface status: "+err.Error(), mainView)
 		return
 	}
 
 	if status == "down" {
+		logger.Info("Attempting to enable interface %s", iface.Name)
 		err = setInterfaceStatus(iface.Name, "up")
 		if err != nil {
-			uiutil.ShowError(app, "Error enabling interface: "+err.Error(), mainView)
+			logger.Error("Failed to enable interface %s: %v", iface.Name, err)
+			uiutil.ShowError(app, pages, "Error enabling interface: "+err.Error(), mainView)
 		} else {
-			uiutil.ShowMessage(app, fmt.Sprintf("Interface %s has been enabled.", iface.Name), mainView)
+			logger.Info("Successfully enabled interface %s", iface.Name)
+			uiutil.ShowMessage(app, pages, fmt.Sprintf("Interface %s has been enabled.", iface.Name), mainView)
 		}
 	} else {
-		confirmDisable(app, iface.Name, mainView)
+		confirmDisable(app, pages, iface.Name, mainView)
 	}
 }
 
-func showInterfaceList(app *tview.Application, interfaces []net.Interface, mainView tview.Primitive) {
-	if uiutil.IsFloatingBoxActive {
-		return
-	}
-
-	list := tview.NewList().
-		ShowSecondaryText(false).
-		SetHighlightFullLine(true).
-		SetSelectedTextColor(tcell.ColorBlack).
-		SetSelectedBackgroundColor(tcell.ColorYellow)
-
-	list.SetTitle(" Select Ethernet Interface to Toggle ").
-		SetTitleAlign(tview.AlignCenter).
-		SetBorder(true)
-
-	for _, iface := range interfaces {
+func showInterfaceList(app *tview.Application, pages *tview.Pages, interfaces []net.Interface, mainView tview.Primitive) {
+	items := make([]string, len(interfaces)+1)
+	for i, iface := range interfaces {
 		status, _ := getInterfaceStatus(iface.Name)
-		list.AddItem(fmt.Sprintf("%s (%s)", iface.Name, status), "", 0, nil)
+		items[i] = fmt.Sprintf("%s (%s)", iface.Name, status)
 	}
-	list.AddItem("Cancel", "", 0, func() {
-		uiutil.CloseFloatingBox(app, mainView)
-	})
+	items[len(interfaces)] = "Cancel"
 
-	// Calculate dynamic size
-	width := 40
-	height := len(interfaces) + 4
-
-	for _, iface := range interfaces {
-		if len(iface.Name)+10 > width {
-			width = len(iface.Name) + 10
-		}
-	}
-
-	list.SetSelectedFunc(func(index int, mainText, secondaryText string, shortcut rune) {
+	uiutil.ShowList(app, pages, "Select Ethernet Interface to Toggle", items, func(index int) {
 		if index < len(interfaces) {
-			toggleInterface(app, interfaces[index].Name, mainView)
+			toggleInterface(app, pages, interfaces[index].Name, mainView)
 		}
-	})
-
-	floatingBox := uiutil.FloatingBox(list, width, height)
-	page := tview.NewPages().
-		AddPage("background", mainView, true, true).
-		AddPage("floating", floatingBox, true, true)
-
-	list.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		switch event.Key() {
-		case tcell.KeyEscape, tcell.KeyRune:
-			if event.Rune() == 'q' {
-				uiutil.CloseFloatingBox(app, mainView)
-				return nil
-			}
-		}
-		return event
-	})
-	uiutil.IsFloatingBoxActive = true
-	app.SetRoot(page, true).SetFocus(list)
+	}, mainView)
 }
 
-func toggleInterface(app *tview.Application, name string, mainView tview.Primitive) {
+func toggleInterface(app *tview.Application, pages *tview.Pages, name string, mainView tview.Primitive) {
+	logger.Info("Attempting to toggle interface: %s", name)
 	status, err := getInterfaceStatus(name)
 	if err != nil {
-		uiutil.ShowError(app, "Error getting interface status: "+err.Error(), mainView)
+		logger.Error("Failed to get status for interface %s: %v", name, err)
+		uiutil.ShowError(app, pages, "Error getting interface status: "+err.Error(), mainView)
 		return
 	}
 
@@ -119,45 +91,42 @@ func toggleInterface(app *tview.Application, name string, mainView tview.Primiti
 		newStatus = "down"
 	}
 
+	logger.Info("Attempting to set interface %s to %s", name, newStatus)
 	err = setInterfaceStatus(name, newStatus)
 	if err != nil {
-		uiutil.ShowError(app, fmt.Sprintf("Error setting interface %s to %s: %s\n\n[red]root access needed!\n", name, newStatus, err.Error()), mainView)
+		logger.Error("Failed to set interface %s to %s: %v", name, newStatus, err)
+		uiutil.ShowError(app, pages, fmt.Sprintf("Error setting interface %s to %s: %s\n\n[red]root access needed!\n", name, newStatus, err.Error()), mainView)
 	} else {
-		uiutil.ShowMessage(app, fmt.Sprintf("Interface %s has been set to %s.", name, newStatus), mainView)
+		logger.Info("Successfully set interface %s to %s", name, newStatus)
+		uiutil.ShowMessage(app, pages, fmt.Sprintf("Interface %s has been set to %s.", name, newStatus), mainView)
 	}
 }
 
-func confirmDisable(app *tview.Application, name string, mainView tview.Primitive) {
-	modal := tview.NewModal().
-		SetText(fmt.Sprintf("Do you want to disable interface %s?", name)).
-		AddButtons([]string{"Yes", "No"}).
-		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
-			if buttonLabel == "Yes" {
-				err := setInterfaceStatus(name, "down")
-				if err != nil {
-					uiutil.ShowError(app, "Error disabling interface: "+err.Error(), mainView)
-				} else {
-					uiutil.ShowMessage(app, fmt.Sprintf("Interface %s has been disabled.", name), mainView)
-				}
+func confirmDisable(app *tview.Application, pages *tview.Pages, name string, mainView tview.Primitive) {
+	logger.Info("Confirming disable for interface: %s", name)
+	uiutil.ShowConfirm(app, pages, fmt.Sprintf("Do you want to disable interface %s?", name), func(confirmed bool) {
+		if confirmed {
+			logger.Info("User confirmed disabling interface %s", name)
+			err := setInterfaceStatus(name, "down")
+			if err != nil {
+				logger.Error("Failed to disable interface %s: %v", name, err)
+				uiutil.ShowError(app, pages, "Error disabling interface: "+err.Error(), mainView)
 			} else {
-				app.SetRoot(mainView, true)
-				if outputBox, ok := mainView.(*tview.Flex).GetItem(1).(*tview.Flex).GetItem(1).(*tview.List); ok {
-					app.SetFocus(outputBox)
-				}
+				logger.Info("Successfully disabled interface %s", name)
+				uiutil.ShowMessage(app, pages, fmt.Sprintf("Interface %s has been disabled.", name), mainView)
 			}
-		})
-
-	pages := tview.NewPages().
-		AddPage("background", mainView, true, true).
-		AddPage("modal", modal, true, true)
-
-	app.SetRoot(pages, true).SetFocus(modal)
+		} else {
+			logger.Info("User cancelled disabling interface %s", name)
+		}
+	}, mainView)
 }
 
 func getInterfaceStatus(name string) (string, error) {
+	logger.Info("Getting status for interface: %s", name)
 	cmd := exec.Command("ip", "link", "show", name)
 	output, err := cmd.Output()
 	if err != nil {
+		logger.Error("Failed to get status for interface %s: %v", name, err)
 		return "", err
 	}
 
@@ -167,7 +136,12 @@ func getInterfaceStatus(name string) (string, error) {
 	return "down", nil
 }
 
-func setInterfaceStatus(name string, status string) error {
+func setInterfaceStatus(name, status string) error {
+	logger.Info("Setting interface %s status to %s", name, status)
 	cmd := exec.Command("ip", "link", "set", name, status)
-	return cmd.Run()
+	err := cmd.Run()
+	if err != nil {
+		logger.Error("Failed to set interface %s status to %s: %v", name, status, err)
+	}
+	return err
 }

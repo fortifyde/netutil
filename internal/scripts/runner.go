@@ -7,8 +7,8 @@ import (
 	"github.com/rivo/tview"
 )
 
-func RunBashScript(scriptPath string, outputBox *tview.TextView) {
-	outputBox.SetText("Running script: " + scriptPath + "\n") // Placeholder message
+func RunBashScript(scriptPath string, toolbox *tview.TextView) {
+	toolbox.SetText("Running script: " + scriptPath + "\n") // placeholder
 	cmd := exec.Command("bash", scriptPath)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -18,13 +18,12 @@ func RunBashScript(scriptPath string, outputBox *tview.TextView) {
 		log.Fatalf("Failed to start command: %v", err)
 	}
 
-	// Capture and display output in the outputBox
 	go func() {
 		buf := make([]byte, 1024)
 		for {
 			n, err := stdout.Read(buf)
 			if n > 0 {
-				outputBox.Write(buf[:n])
+				toolbox.Write(buf[:n])
 			}
 			if err != nil {
 				break

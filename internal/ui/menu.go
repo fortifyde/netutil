@@ -5,70 +5,59 @@ import (
 	"time"
 
 	"github.com/fortifyde/netutil/internal/functions"
-	"github.com/gdamore/tcell/v2"
+	"github.com/fortifyde/netutil/internal/logger"
+	"github.com/fortifyde/netutil/internal/pkg"
+	"github.com/fortifyde/netutil/internal/uiutil"
 	"github.com/rivo/tview"
 )
 
-// Nord color palette
-var (
-	nordBg        = tcell.NewRGBColor(46, 52, 64)    // Nord0
-	nordFg        = tcell.NewRGBColor(216, 222, 233) // Nord4
-	nordHighlight = tcell.NewRGBColor(235, 203, 139) // Nord13
-	nordAccent    = tcell.NewRGBColor(191, 97, 106)  // Nord12
-)
-
 func RunApp() error {
+	logger.Info("Starting UI application")
 	app := tview.NewApplication()
-	var mainFlex *tview.Flex
+	pages := tview.NewPages()
 
-	// Set default colors
-	tview.Styles.PrimitiveBackgroundColor = nordBg
-	tview.Styles.ContrastBackgroundColor = nordBg
-	tview.Styles.MoreContrastBackgroundColor = nordBg
-	tview.Styles.PrimaryTextColor = nordFg
-	tview.Styles.SecondaryTextColor = nordFg
-	tview.Styles.TertiaryTextColor = nordFg
-	tview.Styles.InverseTextColor = nordBg
-	tview.Styles.ContrastSecondaryTextColor = nordHighlight
+	// set default colors
+	tview.Styles.PrimitiveBackgroundColor = pkg.NordBg
+	tview.Styles.ContrastBackgroundColor = pkg.NordBg
+	tview.Styles.MoreContrastBackgroundColor = pkg.NordBg
+	tview.Styles.PrimaryTextColor = pkg.NordFg
+	tview.Styles.SecondaryTextColor = pkg.NordFg
+	tview.Styles.TertiaryTextColor = pkg.NordFg
+	tview.Styles.InverseTextColor = pkg.NordBg
+	tview.Styles.ContrastSecondaryTextColor = pkg.NordHighlight
 
-	// Title and version box
 	titleBox := tview.NewTextView().
 		SetTextAlign(tview.AlignCenter).
-		SetText("[::b]NetUtil[-] [::i]v1.0.0[-]").
-		SetTextColor(nordAccent).
+		SetText(fmt.Sprintf("[::b]NetUtil[-] [::i]v%s[-]", pkg.Version)).
+		SetTextColor(pkg.NordAccent).
 		SetDynamicColors(true)
 	titleBox.SetBorder(true)
 
-	// Search box
 	searchBox := tview.NewInputField().
-		SetLabel("Search: ").
-		SetFieldTextColor(nordFg).
-		SetFieldWidth(30).
-		SetTitleAlign(tview.AlignLeft)
-	searchBox.SetBorder(true).SetTitle("Search")
+		SetLabel("Press / to start search").
+		SetFieldTextColor(pkg.NordFg).
+		SetFieldWidth(0)
+	searchBox.SetBorder(true).SetTitle("Search").SetTitleAlign(tview.AlignLeft)
 
-	// Output box
 	lastCompileDate := time.Now().Format("2006-01-02")
-	outputBox := tview.NewList().
+	toolbox := tview.NewList().
 		ShowSecondaryText(false).
-		SetMainTextColor(nordFg).
-		SetSelectedTextColor(nordFg).
-		SetSelectedBackgroundColor(nordBg)
-	outputBox.SetBorder(true).SetTitle("Network Toolbox - " + lastCompileDate).SetTitleAlign(tview.AlignLeft)
+		SetMainTextColor(pkg.NordFg).
+		SetSelectedTextColor(pkg.NordFg).
+		SetSelectedBackgroundColor(pkg.NordBg)
+	toolbox.SetBorder(true).SetTitle("Network Toolbox - " + lastCompileDate).SetTitleAlign(tview.AlignLeft)
 
-	// Menu
 	menu := tview.NewList().
 		ShowSecondaryText(false).
 		SetHighlightFullLine(true).
-		SetSelectedTextColor(nordBg).
-		SetSelectedBackgroundColor(nordHighlight).
-		SetMainTextColor(nordFg)
-
+		SetSelectedTextColor(pkg.NordBg).
+		SetSelectedBackgroundColor(pkg.NordHighlight).
+		SetMainTextColor(pkg.NordFg)
+	menu.SetBorder(true).SetTitle("Main Menu").SetTitleAlign(tview.AlignLeft)
 	categories := []string{"System Configuration", "Category 2", "Category 3", "Category 4", "Category 5"}
 	categoryContents := make(map[string][]string)
 
-	// Define functions for the "System Configuration" category
-	categoryContents["System Configuration"] = []string{"Check and toggle interfaces", "Edit Working Directory", "Function 3"}
+	categoryContents["System Configuration"] = []string{"Check and toggle interfaces", "Edit Working Directory", "Save Network Config", "Load Network Config"}
 
 	for _, category := range categories {
 		menu.AddItem(category, "", 0, nil)
@@ -81,83 +70,76 @@ func RunApp() error {
 		}
 	}
 
-	updateOutputBox := func(category string) {
-		outputBox.Clear()
+	updatetoolbox := func(category string) {
+		toolbox.Clear()
 		for _, function := range categoryContents[category] {
-			outputBox.AddItem(function, "", 0, func() {
+			toolbox.AddItem(function, "", 0, func() {
 				switch function {
 				case "Check and toggle interfaces":
-					functions.ToggleEthernetInterfaces(app, mainFlex)
+					functions.ToggleEthernetInterfaces(app, pages, toolbox)
 				case "Edit Working Directory":
-					if err := functions.EditWorkingDirectory(app, mainFlex); err != nil {
-						showMessage(app, fmt.Sprintf("Error: %s", err))
+					if err := functions.EditWorkingDirectory(app, pages, toolbox); err != nil {
+						uiutil.ShowMessage(app, pages, fmt.Sprintf("Error: %s", err), toolbox)
+					}
+				case "Save Network Config":
+					if err := functions.SaveNetworkConfig(app, pages, toolbox); err != nil {
+						uiutil.ShowMessage(app, pages, fmt.Sprintf("Error: %s", err), toolbox)
+					}
+				case "Load Network Config":
+					if err := functions.LoadAndApplyNetworkConfig(app, pages, toolbox); err != nil {
+						uiutil.ShowMessage(app, pages, fmt.Sprintf("Error: %s", err), toolbox)
 					}
 				default:
-					showMessage(app, fmt.Sprintf("Function '%s' not implemented yet", function))
+					uiutil.ShowMessage(app, pages, fmt.Sprintf("Function '%s' not implemented yet", function), toolbox)
 				}
 			})
 		}
 	}
 
 	menu.SetChangedFunc(func(index int, mainText, secondaryText string, shortcut rune) {
-		updateOutputBox(mainText)
+		updatetoolbox(mainText)
 	})
 
-	menu.SetBorder(true).SetTitle("Menu")
+	// populate toolbox initially
+	updatetoolbox(categories[0])
 
-	// Populate outputBox with initial category content
-	updateOutputBox(categories[0])
-
-	// Command info box
-	cmdInfoBox := tview.NewTextView().
+	cmdInfoView := tview.NewTextView().
 		SetDynamicColors(true).
-		SetText(fmt.Sprintf(""+
-			"[%s]Movement:[-]                         [%s]Other:[-]\n"+
-			"[%s]h, ←[-]: Focus menu                  [%s]q, Ctrl+C[-]: Exit NetUtil\n"+
-			"[%s]l, →[-]: Focus functions             [%s]d[-]        : Function description\n"+
-			"[%s]k, ↑[-]: Select item above           [%s]/[-]        : Search\n"+
-			"[%s]j, ↓[-]: Select item below",
-			nordHighlight.String(),
-			nordHighlight.String(),
-			nordAccent.String(),
-			nordAccent.String(),
-			nordAccent.String(),
-			nordAccent.String(),
-			nordAccent.String(),
-			nordAccent.String(),
-			nordAccent.String()))
-	cmdInfoBox.SetBorder(true).SetTitle("Command List").SetTitleAlign(tview.AlignLeft)
+		SetTextAlign(tview.AlignLeft).
+		SetText(createCommandInfoText())
 
-	// Layout
-	topFlex := tview.NewFlex().
-		AddItem(titleBox, 0, 1, false).
-		AddItem(searchBox, 0, 2, false)
+	cmdInfoView.SetBorder(true).
+		SetTitle("Command List").
+		SetTitleAlign(tview.AlignLeft).
+		SetBorderColor(pkg.NordAccent)
 
-	middleFlex := tview.NewFlex().
-		AddItem(menu, 0, 1, true).
-		AddItem(outputBox, 0, 2, false)
+	// adjust height based on lines in cmdbox
+	cmdInfoHeight := 7
 
-	bottomFlex := tview.NewFlex().
-		AddItem(cmdInfoBox, 0, 1, false)
+	menuWidth := 30
 
-	mainFlex = tview.NewFlex().SetDirection(tview.FlexRow).
-		AddItem(topFlex, 3, 1, false).
-		AddItem(middleFlex, 0, 1, true).
-		AddItem(bottomFlex, 7, 1, false)
+	grid := tview.NewGrid().
+		SetRows(3, 0, cmdInfoHeight).
+		SetColumns(menuWidth, 0).
+		SetBorders(false).
+		AddItem(titleBox, 0, 0, 1, 1, 0, 0, false).
+		AddItem(searchBox, 0, 1, 1, 1, 0, 0, false).
+		AddItem(menu, 1, 0, 1, 1, 0, 0, true).
+		AddItem(toolbox, 1, 1, 1, 1, 0, 0, false).
+		AddItem(cmdInfoView, 2, 0, 1, 2, 0, 0, false)
 
-	SetupKeyboardControls(app, menu, outputBox)
+	pages.AddPage("main", grid, true, true)
 
-	return app.SetRoot(mainFlex, true).Run()
+	SetupKeyboardControls(app, menu, toolbox, pages)
+
+	logger.Info("UI application started successfully")
+	return app.SetRoot(pages, true).Run()
 }
 
-// Add this helper function at the end of the file
-func showMessage(app *tview.Application, message string) {
-	modal := tview.NewModal().
-		SetText(message).
-		AddButtons([]string{"OK"}).
-		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
-			app.SetRoot(app.GetFocus(), true)
-		})
-
-	app.SetRoot(modal, false).SetFocus(modal)
+func createCommandInfoText() string {
+	return `[::b]Movement[::-]                    [::b]Other[::-]
+h, ←: Focus menu              q, Ctrl+C: Exit NetUtil
+l, →: Focus functions         d: Function description
+k, ↑: Select item above       /: Search
+j, ↓: Select item below`
 }
