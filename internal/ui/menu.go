@@ -54,40 +54,50 @@ func RunApp() error {
 		SetSelectedBackgroundColor(pkg.NordHighlight).
 		SetMainTextColor(pkg.NordFg)
 	menu.SetBorder(true).SetTitle("Main Menu").SetTitleAlign(tview.AlignLeft)
-	categories := []string{"System Configuration", "Category 2", "Category 3", "Category 4", "Category 5"}
+	categories := []string{"System Configuration", "Network Recon", "Category 3", "Category 4", "Category 5"}
 	categoryContents := make(map[string][]string)
 
 	categoryContents["System Configuration"] = []string{"Check and toggle interfaces", "Edit Working Directory", "Save Network Config", "Load Network Config"}
+	categoryContents["Network Recon"] = []string{"Wireshark Listening"}
 
 	for _, category := range categories {
 		menu.AddItem(category, "", 0, nil)
-		if category != "System Configuration" {
-			functions := []string{}
-			for j := 1; j <= 3; j++ {
-				functions = append(functions, fmt.Sprintf("Function %d", j))
-			}
-			categoryContents[category] = functions
+		if _, exists := categoryContents[category]; !exists {
+			// add placeholder items
+			categoryContents[category] = []string{"Function 1", "Function 2", "Function 3"}
 		}
 	}
 
 	updatetoolbox := func(category string) {
 		toolbox.Clear()
 		for _, function := range categoryContents[category] {
+			function := function // Create a new variable to avoid closure issues
 			toolbox.AddItem(function, "", 0, func() {
-				switch function {
-				case "Check and toggle interfaces":
-					functions.ToggleEthernetInterfaces(app, pages, toolbox)
-				case "Edit Working Directory":
-					if err := functions.EditWorkingDirectory(app, pages, toolbox); err != nil {
-						uiutil.ShowMessage(app, pages, fmt.Sprintf("Error: %s", err), toolbox)
+				switch category {
+				case "System Configuration":
+					switch function {
+					case "Check and toggle interfaces":
+						functions.ToggleEthernetInterfaces(app, pages, toolbox)
+					case "Edit Working Directory":
+						if err := functions.EditWorkingDirectory(app, pages, toolbox); err != nil {
+							uiutil.ShowError(app, pages, fmt.Sprintf("Error: %s", err), toolbox, nil)
+						}
+					case "Save Network Config":
+						if err := functions.SaveNetworkConfig(app, pages, toolbox); err != nil {
+							uiutil.ShowError(app, pages, fmt.Sprintf("Error: %s", err), toolbox, nil)
+						}
+					case "Load Network Config":
+						if err := functions.LoadAndApplyNetworkConfig(app, pages, toolbox); err != nil {
+							uiutil.ShowError(app, pages, fmt.Sprintf("Error: %s", err), toolbox, nil)
+						}
 					}
-				case "Save Network Config":
-					if err := functions.SaveNetworkConfig(app, pages, toolbox); err != nil {
-						uiutil.ShowMessage(app, pages, fmt.Sprintf("Error: %s", err), toolbox)
-					}
-				case "Load Network Config":
-					if err := functions.LoadAndApplyNetworkConfig(app, pages, toolbox); err != nil {
-						uiutil.ShowMessage(app, pages, fmt.Sprintf("Error: %s", err), toolbox)
+				case "Network Recon":
+					switch function {
+					case "Wireshark Listening":
+						err := functions.StartWiresharkListening(app, pages, toolbox)
+						if err != nil {
+							uiutil.ShowError(app, pages, fmt.Sprintf("Wireshark listening error: %v", err), toolbox, nil)
+						}
 					}
 				default:
 					uiutil.ShowMessage(app, pages, fmt.Sprintf("Function '%s' not implemented yet", function), toolbox)

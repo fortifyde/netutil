@@ -14,11 +14,11 @@ import (
 	"github.com/rivo/tview"
 )
 
-// Function for saving and loading network configurations.
-// It retrieves the list of Ethernet interfaces (including subinterfaces),
-// their IP configurations, and the default route.
+// function for saving and loading network configurations
+// retrieves the list of ethernet interfaces (including subinterfaces),
+// their IP configurations, and the default route
 //
-// Requires root access to modify network configurations.
+// requires root access to modify network configurations
 
 func checkElevatedAccess() error {
 	if os.Geteuid() != 0 {
@@ -38,7 +38,7 @@ func getDefaultRoute() (string, error) {
 	for _, line := range lines {
 		fields := strings.Fields(line)
 		if len(fields) >= 3 && fields[0] == "default" {
-			return fields[2], nil // Return the gateway IP address
+			return fields[2], nil
 		}
 	}
 
@@ -87,7 +87,7 @@ func applyInterfaceConfig(ifaceName string, state InterfaceState) error {
 		return err
 	}
 
-	// Set IP address and subnet mask
+	// flush and set IP address and subnet mask
 	cmd := exec.Command("ip", "addr", "flush", "dev", ifaceName)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to flush IP address: %v", err)
@@ -98,7 +98,7 @@ func applyInterfaceConfig(ifaceName string, state InterfaceState) error {
 		return fmt.Errorf("failed to set IP address: %v", err)
 	}
 
-	// Set link state
+	// set link state
 	linkCmd := "up"
 	if state.LinkState == "down" {
 		linkCmd = "down"
@@ -108,7 +108,7 @@ func applyInterfaceConfig(ifaceName string, state InterfaceState) error {
 		return fmt.Errorf("failed to set link state: %v", err)
 	}
 
-	// Configure subinterfaces
+	// configure subinterfaces
 	for _, sub := range state.Subinterfaces {
 		vlanID := strings.TrimPrefix(sub.Name, ifaceName+".")
 		cmd = exec.Command("ip", "link", "add", "link", ifaceName, "name", sub.Name, "type", "vlan", "id", vlanID)
@@ -160,7 +160,7 @@ func SaveNetworkConfig(app *tview.Application, pages *tview.Pages, mainView tvie
 	// get default route
 	defaultRoute, err := getDefaultRoute()
 	if err != nil {
-		uiutil.ShowError(app, pages, fmt.Sprintf("Failed to get default route: %v", err), mainView)
+		uiutil.ShowError(app, pages, fmt.Sprintf("Failed to get default route: %v", err), mainView, nil)
 	} else {
 		cfg.DefaultRoute = defaultRoute
 	}
@@ -243,7 +243,7 @@ func LoadAndApplyNetworkConfig(app *tview.Application, pages *tview.Pages, mainV
 	for ifaceName, state := range cfg.NetworkInterfaces {
 		err := applyInterfaceConfig(ifaceName, state)
 		if err != nil {
-			uiutil.ShowError(app, pages, fmt.Sprintf("Failed to apply config for interface %s: %v", ifaceName, err), mainView)
+			uiutil.ShowError(app, pages, fmt.Sprintf("Failed to apply config for interface %s: %v", ifaceName, err), mainView, nil)
 		} else {
 			uiutil.ShowMessage(app, pages, fmt.Sprintf("Configuration applied for interface %s", ifaceName), mainView)
 		}
@@ -252,7 +252,7 @@ func LoadAndApplyNetworkConfig(app *tview.Application, pages *tview.Pages, mainV
 	if cfg.DefaultRoute != "" {
 		err := applyDefaultRoute(cfg.DefaultRoute)
 		if err != nil {
-			uiutil.ShowError(app, pages, fmt.Sprintf("Failed to apply default route: %v", err), mainView)
+			uiutil.ShowError(app, pages, fmt.Sprintf("Failed to apply default route: %v", err), mainView, nil)
 		} else {
 			uiutil.ShowMessage(app, pages, "Default route applied successfully", mainView)
 		}

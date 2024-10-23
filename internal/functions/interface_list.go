@@ -8,10 +8,9 @@ import (
 	"strings"
 )
 
-// Retrieves all Ethernet interfaces on the system.
-// Filters out wireless interfaces and subinterfaces.
-// Separate function to retrieve subinterfaces of a given interface.
-
+// retrieve all ethernet interfaces
+// filter out wireless interfaces and subinterfaces
+// separate function to retrieve subinterfaces of a given interface
 func GetEthernetInterfaces() ([]net.Interface, error) {
 	allInterfaces, err := net.Interfaces()
 	if err != nil {

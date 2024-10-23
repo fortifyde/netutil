@@ -14,9 +14,9 @@ import (
 	"github.com/rivo/tview"
 )
 
-// Handles loading and saving of the config file.
-// If the file doesn't exist, it returns an empty Config struct.
-// Uses zenity to select the working directory with manual fallback.
+// handles loading and saving of config file
+// if file doesn't exist, returns empty config struct
+// uses zenity to select working directory with manual fallback
 
 type Config struct {
 	WorkingDirectory  string                    `json:"working_directory"`
@@ -102,27 +102,27 @@ func SaveConfig(config *Config) error {
 func EditWorkingDirectory(app *tview.Application, pages *tview.Pages, mainView tview.Primitive) error {
 	cfg, err := LoadConfig()
 	if err != nil {
-		uiutil.ShowError(app, pages, fmt.Sprintf("Failed to load config: %v", err), mainView)
+		uiutil.ShowError(app, pages, fmt.Sprintf("Failed to load config: %v", err), mainView, nil)
 		return err
 	}
 
 	cmd := exec.Command("zenity", "--file-selection", "--directory")
 	output, err := cmd.Output()
 	if err != nil {
-		uiutil.ShowError(app, pages, fmt.Sprintf("Failed to select directory: %v", err), mainView)
+		uiutil.ShowError(app, pages, fmt.Sprintf("Failed to select directory: %v", err), mainView, nil)
 		return err
 	}
 
 	newPath := strings.TrimSpace(string(output))
 	if newPath == "" {
-		uiutil.ShowError(app, pages, "No directory path selected", mainView)
+		uiutil.ShowError(app, pages, "No directory path selected", mainView, nil)
 		return fmt.Errorf("no directory path selected")
 	}
 
 	cfg.WorkingDirectory = newPath
 	err = SaveConfig(cfg)
 	if err != nil {
-		uiutil.ShowError(app, pages, fmt.Sprintf("Failed to save config: %v", err), mainView)
+		uiutil.ShowError(app, pages, fmt.Sprintf("Failed to save config: %v", err), mainView, nil)
 		return err
 	}
 

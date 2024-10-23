@@ -37,7 +37,7 @@ func Init(workingDir string) error {
 		logger = log.New(logFile, "", log.Ldate|log.Ltime)
 		initialized = true
 
-		// Add an initial log entry
+		// add an initial log entry
 		logger.Printf("[INFO] Logging initialized at %s", time.Now().Format("2006-01-02 15:04:05"))
 	})
 	return initErr
