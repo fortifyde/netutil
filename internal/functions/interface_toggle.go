@@ -39,34 +39,40 @@ func ToggleEthernetInterfaces(app *tview.Application, pages *tview.Pages, mainVi
 }
 
 func toggleSingleInterface(app *tview.Application, pages *tview.Pages, iface net.Interface, mainView tview.Primitive) {
-	logger.Info("Attempting to toggle single interface: %s", iface.Name)
-	status, err := getInterfaceStatus(iface.Name)
+	currentStatus, err := getInterfaceStatus(iface.Name)
 	if err != nil {
 		logger.Error("Failed to get status for interface %s: %v", iface.Name, err)
-		uiutil.ShowError(app, pages, "Error getting interface status: "+err.Error(), mainView, nil)
+		uiutil.ShowError(app, pages, fmt.Sprintf("Error: %v", err), mainView, nil)
 		return
 	}
 
-	if status == "down" {
-		logger.Info("Attempting to enable interface %s", iface.Name)
-		err = setInterfaceStatus(iface.Name, "up")
-		if err != nil {
-			logger.Error("Failed to enable interface %s: %v", iface.Name, err)
-			uiutil.ShowError(app, pages, "Error enabling interface: "+err.Error(), mainView, nil)
-		} else {
-			logger.Info("Successfully enabled interface %s", iface.Name)
-			uiutil.ShowMessage(app, pages, fmt.Sprintf("Interface %s has been enabled.", iface.Name), mainView)
-		}
-	} else {
-		confirmDisable(app, pages, iface.Name, mainView)
+	newStatus := "down"
+	if currentStatus == "down" {
+		newStatus = "up"
 	}
+
+	// Confirm action
+	uiutil.ShowConfirm(app, pages, fmt.Sprintf("Are you sure you want to set interface %s to %s?", iface.Name, newStatus), func(yes bool) {
+		if yes {
+			err := setInterfaceStatus(iface.Name, newStatus)
+			if err != nil {
+				logger.Error("Failed to set interface %s to %s: %v", iface.Name, newStatus, err)
+				uiutil.ShowError(app, pages, fmt.Sprintf("Error: %v", err), mainView, nil)
+				return
+			}
+			logger.Info("Interface %s set to %s", iface.Name, newStatus)
+			uiutil.ShowMessage(app, pages, fmt.Sprintf("Interface %s set to %s.", iface.Name, newStatus), mainView)
+		} else {
+			logger.Info("User canceled toggling interface %s", iface.Name)
+		}
+	}, mainView)
 }
 
 func showInterfaceList(app *tview.Application, pages *tview.Pages, interfaces []net.Interface, mainView tview.Primitive) {
 	items := make([]string, len(interfaces)+1)
 	for i, iface := range interfaces {
 		status, _ := getInterfaceStatus(iface.Name)
-		items[i] = fmt.Sprintf("%s (%s)", iface.Name, status)
+		items[i] = fmt.Sprintf("%s (currently %s)", iface.Name, status)
 	}
 	items[len(interfaces)] = "Cancel"
 
@@ -100,25 +106,6 @@ func toggleInterface(app *tview.Application, pages *tview.Pages, name string, ma
 		logger.Info("Successfully set interface %s to %s", name, newStatus)
 		uiutil.ShowMessage(app, pages, fmt.Sprintf("Interface %s has been set to %s.", name, newStatus), mainView)
 	}
-}
-
-func confirmDisable(app *tview.Application, pages *tview.Pages, name string, mainView tview.Primitive) {
-	logger.Info("Confirming disable for interface: %s", name)
-	uiutil.ShowConfirm(app, pages, fmt.Sprintf("Do you want to disable interface %s?", name), func(confirmed bool) {
-		if confirmed {
-			logger.Info("User confirmed disabling interface %s", name)
-			err := setInterfaceStatus(name, "down")
-			if err != nil {
-				logger.Error("Failed to disable interface %s: %v", name, err)
-				uiutil.ShowError(app, pages, "Error disabling interface: "+err.Error(), mainView, nil)
-			} else {
-				logger.Info("Successfully disabled interface %s", name)
-				uiutil.ShowMessage(app, pages, fmt.Sprintf("Interface %s has been disabled.", name), mainView)
-			}
-		} else {
-			logger.Info("User cancelled disabling interface %s", name)
-		}
-	}, mainView)
 }
 
 func getInterfaceStatus(name string) (string, error) {

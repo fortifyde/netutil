@@ -18,6 +18,22 @@ var (
 	initialized bool
 )
 
+// LogLevel represents the severity of the log message.
+type LogLevel int
+
+const (
+	INFO LogLevel = iota
+	WARNING
+	ERROR
+	CRITICAL
+	DEBUG
+)
+
+func (l LogLevel) String() string {
+	return [...]string{"INFO", "WARNING", "ERROR", "CRITICAL", "DEBUG"}[l]
+}
+
+// Init initializes the logger.
 func Init(workingDir string) error {
 	var initErr error
 	once.Do(func() {
@@ -37,12 +53,13 @@ func Init(workingDir string) error {
 		logger = log.New(logFile, "", log.Ldate|log.Ltime)
 		initialized = true
 
-		// add an initial log entry
+		// Add an initial log entry
 		logger.Printf("[INFO] Logging initialized at %s", time.Now().Format("2006-01-02 15:04:05"))
 	})
 	return initErr
 }
 
+// getOrCreateLogDir retrieves or creates the log directory.
 func getOrCreateLogDir(workingDir string) (string, error) {
 	entries, err := os.ReadDir(workingDir)
 	if err != nil {
@@ -56,7 +73,7 @@ func getOrCreateLogDir(workingDir string) (string, error) {
 		}
 	}
 
-	// if no log directory found in working directory, create one
+	// If no log directory found in working directory, create one
 	newLogDir := filepath.Join(workingDir, "logs")
 	err = os.MkdirAll(newLogDir, 0755)
 	if err != nil {
@@ -66,25 +83,43 @@ func getOrCreateLogDir(workingDir string) (string, error) {
 	return newLogDir, nil
 }
 
-func Log(level, format string, v ...interface{}) {
-	// check if logger is initialized
+// Log logs a message with the specified severity level.
+func Log(level LogLevel, format string, v ...interface{}) {
 	if !initialized {
-		fmt.Fprintf(os.Stderr, "[%s] %s\n", level, fmt.Sprintf(format, v...))
+		fmt.Fprintf(os.Stderr, "[%s] %s\n", level.String(), fmt.Sprintf(format, v...))
 		return
 	}
 	_, file, line, _ := runtime.Caller(1)
 	msg := fmt.Sprintf(format, v...)
-	logger.Printf("[%s] %s:%d: %s", level, filepath.Base(file), line, msg)
+	logger.Printf("[%s] %s:%d: %s", level.String(), filepath.Base(file), line, msg)
 }
 
+// Info logs an informational message.
 func Info(format string, v ...interface{}) {
-	Log("INFO", format, v...)
+	Log(INFO, format, v...)
 }
 
+// Warning logs a warning message.
+func Warning(format string, v ...interface{}) {
+	Log(WARNING, format, v...)
+}
+
+// Error logs an error message.
 func Error(format string, v ...interface{}) {
-	Log("ERROR", format, v...)
+	Log(ERROR, format, v...)
 }
 
+// Critical logs a critical error message.
+func Critical(format string, v ...interface{}) {
+	Log(CRITICAL, format, v...)
+}
+
+// Debug logs a debug message.
+func Debug(format string, v ...interface{}) {
+	Log(DEBUG, format, v...)
+}
+
+// Close closes the log file.
 func Close() {
 	if logFile != nil {
 		logFile.Close()

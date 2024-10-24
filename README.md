@@ -23,17 +23,17 @@ The Main Menu of NetUtil is organized into several categories, each containing s
 
 ## System Configuration
 Manage and configure your system networking settings with ease.
-##### Check and Toggle Interfaces
+#### Check and Toggle Interfaces
 View the status of all network interfaces and enable or disable them as needed.
-##### Edit Working Directory
+#### Edit Working Directory
 Modify the directory where network captures, port scans, and analysis results are stored.
-##### Save Network Config
+#### Save Network Config
 Save the current network configuration settings for future use.
-##### Load Network Config
+#### Load Network Config
 Load and apply a previously saved network configuration.
 ## Network Recon
 Perform network reconnaissance
-##### Wireshark Listening
+#### Wireshark Listening
 Start network capturing using Wireshark and perform analysis with tshark. Serves to establish a baseline of network traffic and protocols in use, as well as identify potential areas of interest for further analysis.
 
 ## TODO

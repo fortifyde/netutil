@@ -1,0 +1,13 @@
+**Project Overview:**
+
+My project, **NetUtil**, is a Go-based network utility tool used for vulnerability assessments. It features network configuration, monitoring, and analysis capabilities, leveraging tools like Wireshark and tshark. The tool operates via a text-based UI (using the `tview` library) and is primarily designed to capture and analyze network traffic in real-time, focusing on identifying unencrypted protocols, VLAN IDs, weak SSL/TLS implementations, and unusual network activity. 
+
+**Structure:**
+- Modular codebase with directories for UI (`internal/ui`), network functions (e.g., capturing traffic, toggling interfaces in `internal/functions`), and parsers for traffic analysis in `internal/functions/parsers` (e.g., parser registry, VLAN, protocol distribution).
+- Real-time feedback via UI modals for errors and notifications.
+- Planned enhancements include network discovery, detailed port scanning, and device configuration backups.
+
+**Key Concerns:**
+- The tool needs to run with root access, so security (input sanitization, safe execution) is critical.
+- Code efficiency, modularity, and extensibility are priorities.
+

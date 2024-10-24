@@ -155,6 +155,8 @@ func StartWiresharkListening(app *tview.Application, pages *tview.Pages, mainVie
 		return err
 	}
 
+	logger.Debug("Starting tshark with command: %v", tsharkCmd.Args)
+
 	go func() {
 		// wait for tshark to finish
 		err := tsharkCmd.Wait()
@@ -187,13 +189,13 @@ func StartWiresharkListening(app *tview.Application, pages *tview.Pages, mainVie
 			}, mainView)
 		})
 
-		// gracefully close wireshark
+		// attemt to gracefully close wireshark. after 2 seconds, kill process
 		if err := wiresharkCmd.Process.Signal(os.Interrupt); err != nil {
-			logger.Error("Failed to send interrupt to Wireshark: %v", err)
+			logger.Warning("Failed to send interrupt to Wireshark: %v", err)
 		}
-		time.Sleep(2 * time.Second) // Allow some time for Wireshark to close gracefully
+		time.Sleep(2 * time.Second)
 		if err := wiresharkCmd.Process.Kill(); err != nil {
-			logger.Error("Failed to kill Wireshark process: %v", err)
+			logger.Critical("Failed to kill Wireshark process: %v", err)
 		}
 
 	}()
