@@ -32,7 +32,6 @@ func EnsureDir(dirName string) error {
 
 // get the working directory from the configuration
 func GetWorkingDirectory() string {
-	// Assume there's a function to read config
 	cfg, err := configuration.LoadConfig()
 	if err != nil {
 		logger.Critical("Failed to read configuration: %v", err)
@@ -42,7 +41,6 @@ func GetWorkingDirectory() string {
 }
 
 // extractIPFromLine extracts the IP address from a given line.
-// Adjust this function based on the format of your scan outputs.
 func ExtractIPFromLine(line string) string {
 	fields := strings.Fields(line)
 	for _, field := range fields {

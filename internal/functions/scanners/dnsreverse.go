@@ -22,7 +22,6 @@ func PerformDNSReverseLookup(hostfile, dnsLookupFile string) error {
 	var ips []string
 	for scanner.Scan() {
 		line := scanner.Text()
-		// Assuming the hostfile has one IP per line
 		ip := strings.TrimSpace(line)
 		if ip != "" {
 			ips = append(ips, ip)

@@ -12,10 +12,8 @@ import (
 	"github.com/rivo/tview"
 )
 
-func RunApp() error {
+func RunApp(app *tview.Application, pages *tview.Pages, mainView tview.Primitive) error {
 	logger.Info("Starting UI application")
-	app := tview.NewApplication()
-	pages := tview.NewPages()
 
 	// set default colors
 	tview.Styles.PrimitiveBackgroundColor = pkg.NordBg
@@ -65,7 +63,6 @@ func RunApp() error {
 	for _, category := range categories {
 		menu.AddItem(category, "", 0, nil)
 		if _, exists := categoryContents[category]; !exists {
-			// add placeholder items
 			categoryContents[category] = []string{"Function 1", "Function 2", "Function 3"}
 		}
 	}
@@ -73,7 +70,7 @@ func RunApp() error {
 	updatetoolbox := func(category string) {
 		toolbox.Clear()
 		for _, function := range categoryContents[category] {
-			function := function // Create a new variable to avoid closure issues
+			function := function
 			toolbox.AddItem(function, "", 0, func() {
 				switch category {
 				case "System Configuration":

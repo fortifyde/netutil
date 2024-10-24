@@ -7,17 +7,15 @@ import (
 	"github.com/fortifyde/netutil/internal/logger"
 )
 
-// performWindowsOSDiscovery performs a quick Windows OS discovery and outputs results to windowsDiscoveryFile.
-func PerformWindowsOSDiscovery(ipRange, windowsDiscoveryFile string) error {
-	// Using nmap for OS detection as an example
-	cmd := exec.Command("nmap", "-O", ipRange)
+// performs a quick Windows OS discovery and outputs results to windowsDiscoveryFile.
+func PerformWindowsOSDiscovery(pingScanFile, windowsDiscoveryFile string) error {
+	cmd := exec.Command("nmap", "-Pn", "-n", "-p445", "--script=smb-os-discovery", "-oG", windowsDiscoveryFile, "-iL", pingScanFile)
 	output, err := cmd.Output()
 	if err != nil {
 		logger.Error("Windows OS Discovery command failed: %v", err)
 		return err
 	}
 
-	// Write output to file
 	if err := os.WriteFile(windowsDiscoveryFile, output, 0644); err != nil {
 		logger.Error("Failed to write Windows OS Discovery output to file: %v", err)
 		return err

@@ -10,7 +10,6 @@ import (
 
 // detectInterfaceForIPRange attempts to automatically detect the appropriate interface or VLAN for the given IP range.
 func DetectInterfaceForIPRange(ipRange string) (interfaceName string, vlanID string, err error) {
-	// Parse the IP range to get the network
 	_, network, err := net.ParseCIDR(ipRange)
 	if err != nil {
 		logger.Warning("Invalid IP range format: %v", err)
@@ -38,7 +37,7 @@ func DetectInterfaceForIPRange(ipRange string) (interfaceName string, vlanID str
 				ip = v.IP
 			}
 			if network.Contains(ip) {
-				// Check if the interface is a VLAN subinterface
+				// check if a VLAN subinterface
 				if strings.Contains(iface.Name, ".") {
 					parts := strings.Split(iface.Name, ".")
 					if len(parts) == 2 {

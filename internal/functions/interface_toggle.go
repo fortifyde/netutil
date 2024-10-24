@@ -52,7 +52,6 @@ func toggleSingleInterface(app *tview.Application, pages *tview.Pages, iface net
 		newStatus = "up"
 	}
 
-	// Confirm action
 	uiutil.ShowConfirm(app, pages, "toggleInterfaceConfirmModal", fmt.Sprintf("Are you sure you want to set interface %s to %s?", iface.Name, newStatus), func(yes bool) {
 		if yes {
 			err := setInterfaceStatus(iface.Name, newStatus)

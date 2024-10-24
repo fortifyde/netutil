@@ -8,15 +8,14 @@ import (
 )
 
 // performARPSscan conducts an ARP scan over the specified IP range and outputs results to arpScanFile.
-func PerformARPscan(ipRange, arpScanFile string) error {
-	cmd := exec.Command("arp-scan", "--interface=eth0", ipRange) // Adjust interface as needed
+func PerformARPscan(ipRange, selectedInterface, vlanID, arpScanFile string) error {
+	cmd := exec.Command("arp-scan", "--interface="+selectedInterface+"."+vlanID, ipRange)
 	output, err := cmd.Output()
 	if err != nil {
 		logger.Error("ARP Scan command failed: %v", err)
 		return err
 	}
 
-	// Write output to file
 	if err := os.WriteFile(arpScanFile, output, 0644); err != nil {
 		logger.Error("Failed to write ARP Scan output to file: %v", err)
 		return err

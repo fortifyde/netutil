@@ -9,9 +9,8 @@ import (
 	"github.com/fortifyde/netutil/internal/logger"
 )
 
-// PerformNmapScan conducts an enhanced Nmap discovery scan with service version detection
+// conducts an enhanced Nmap discovery scan with service version detection
 func PerformNmapScan(hostfilePath, nmapOutputPath string) error {
-	// Define the Nmap scan command with desired output formats
 	cmd := exec.Command("nmap",
 		"-PE", "-PP", "-PM", // ICMP probes
 		"-PS22,135-139,445,80,443,5060,2000,3389,53,88,389,636,3268,123", // TCP SYN probes
