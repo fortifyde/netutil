@@ -18,16 +18,20 @@ func StartDiscoveryScan(app *tview.Application, pages *tview.Pages, mainView tvi
 	logger.Info("Starting Discovery Scan")
 
 	// Step 1: Ask the user for an IP range to scan
-	ipRange, err := uiutil.PromptInput(app, pages, "Discovery Scan", "Enter IP range to scan (e.g., 192.168.1.0/24):", mainView)
-	if err != nil {
-		logger.Error("User canceled IP range input: %v", err)
-		return fmt.Errorf("IP range input canceled")
-	}
+	var ipRange string
+	uiutil.PromptInput(app, pages, "Discovery Scan", "Enter IP range to scan (e.g., 192.168.1.0/24):", mainView, func(input string, err error) {
+		if err != nil {
+			logger.Error("User canceled IP range input: %v", err)
+			ipRange = ""
+			return
+		}
+		ipRange = input
+		logger.Info("User provided IP range: %s", ipRange)
+	})
 	if ipRange == "" {
-		logger.Warning("Empty IP range provided")
-		return fmt.Errorf("IP range cannot be empty")
+		return fmt.Errorf("IP range input canceled or empty")
 	}
-	logger.Info("User provided IP range: %s", ipRange)
+
 	// Step 2: Automatically attribute to a fitting interface or VLAN subinterface
 	detectedInterface, vlanID, err := detectInterfaceForIPRange(ipRange)
 	if err != nil {
@@ -40,7 +44,7 @@ func StartDiscoveryScan(app *tview.Application, pages *tview.Pages, mainView tvi
 		confirm, err := uiutil.PromptConfirmation(app, pages, "Discovery Scan", fmt.Sprintf("Detected interface for IP range %s: %s", ipRange, detectedInterface))
 		if err != nil || !confirm {
 			// User declined, prompt to enter their own choice
-			selectedInterface, vlanID, err = promptUserForInterface(app, pages, "Discovery Scan")
+			selectedInterface, vlanID, err = promptUserForInterface(app, pages, "Discovery Scan", mainView)
 			if err != nil {
 				logger.Error("User failed to provide interface: %v", err)
 				return fmt.Errorf("interface selection failed: %v", err)
@@ -50,7 +54,7 @@ func StartDiscoveryScan(app *tview.Application, pages *tview.Pages, mainView tvi
 		}
 	} else {
 		// No interface detected, prompt user to enter their own choice
-		selectedInterface, vlanID, err = promptUserForInterface(app, pages, "Discovery Scan")
+		selectedInterface, vlanID, err = promptUserForInterface(app, pages, "Discovery Scan", mainView)
 		if err != nil {
 			logger.Error("User failed to provide interface: %v", err)
 			return fmt.Errorf("interface selection failed: %v", err)
@@ -60,20 +64,24 @@ func StartDiscoveryScan(app *tview.Application, pages *tview.Pages, mainView tvi
 	logger.Info("Selected interface: %s", selectedInterface)
 
 	// Step 3: Ask user to enter a name for the directory
-	prefilledDirName := ""
-	if vlanID != "" {
-		prefilledDirName = fmt.Sprintf("vlan%s", vlanID)
-	}
-	dirName, err := uiutil.PromptInput(app, pages, "Discovery Scan", "Enter directory name for hostfiles:", mainView, prefilledDirName)
-	if err != nil {
-		logger.Error("User canceled directory name input: %v", err)
-		return fmt.Errorf("directory name input canceled")
-	}
+	var dirName string
+	uiutil.PromptInput(app, pages, "Discovery Scan", "Enter directory name for hostfiles:", mainView, func(input string, err error) {
+		if err != nil {
+			logger.Error("User canceled directory name input: %v", err)
+			dirName = ""
+			return
+		}
+		if input == "" {
+			logger.Warning("Empty directory name provided")
+			dirName = ""
+			return
+		}
+		dirName = input
+		logger.Info("User provided directory name: %s", dirName)
+	}, vlanID)
 	if dirName == "" {
-		logger.Warning("Empty directory name provided")
-		return fmt.Errorf("directory name cannot be empty")
+		return fmt.Errorf("directory name input canceled or empty")
 	}
-	logger.Info("User provided directory name: %s", dirName)
 
 	// Step 4: Create necessary directories
 	workingDir := utils.GetWorkingDirectory()
@@ -197,18 +205,34 @@ func detectInterfaceForIPRange(ipRange string) (interfaceName string, vlanID str
 }
 
 // promptUserForInterface prompts the user to enter an interface in the format "interfaceName[.vlanID]".
-func promptUserForInterface(app *tview.Application, pages *tview.Pages, title string) (interfaceName string, vlanID string, err error) {
-	input, err := uiutil.PromptInput(app, pages, title, "Enter interface (e.g., eth0 or eth0.10):", nil)
-	if err != nil {
-		return "", "", err
+func promptUserForInterface(app *tview.Application, pages *tview.Pages, title string, mainView tview.Primitive) (interfaceName string, vlanID string, err error) {
+	done := make(chan bool)
+	var result string
+	var inputErr error
+
+	uiutil.PromptInput(app, pages, title, "Enter interface (e.g., eth0 or eth0.10):", mainView, func(input string, err error) {
+		if err != nil {
+			inputErr = err
+			done <- true
+			return
+		}
+		result = input
+		done <- true
+	})
+
+	<-done
+
+	if inputErr != nil {
+		return "", "", inputErr
 	}
-	if input == "" {
+
+	if result == "" {
 		return "", "", fmt.Errorf("interface input cannot be empty")
 	}
 
-	parts := strings.Split(input, ".")
+	parts := strings.Split(result, ".")
 	if len(parts) == 2 {
 		return parts[0], parts[1], nil
 	}
-	return input, "", nil
+	return result, "", nil
 }

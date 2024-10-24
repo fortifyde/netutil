@@ -23,6 +23,3 @@ go.work.sum
 
 # env file
 .env
-
-# project context file
-project_context.txt

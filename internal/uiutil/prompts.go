@@ -4,73 +4,41 @@ import (
 	"fmt"
 
 	"github.com/fortifyde/netutil/internal/logger"
-	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 )
 
 // PromptInput displays a modal to get input from the user.
 // If prefill is not empty, the input field is prefilled with it.
-func PromptInput(app *tview.Application, pages *tview.Pages, title, label string, mainView tview.Primitive, prefill ...string) (string, error) {
+// The result is returned via the callback function.
+func PromptInput(app *tview.Application, pages *tview.Pages, title, label string, mainView tview.Primitive, callback func(string, error), prefill ...string) {
 	input := tview.NewInputField().
 		SetLabel(label).
-		SetFieldWidth(40).
-		SetDoneFunc(func(key tcell.Key) {
-			if key == tcell.KeyEnter {
-				app.QueueUpdateDraw(func() {
-					pages.RemovePage("inputModal")
-				})
-			}
-		})
+		SetFieldWidth(40)
+
 	if len(prefill) > 0 {
 		input.SetText(prefill[0])
 	}
 
-	modal := tview.NewModal().
-		SetText(fmt.Sprintf("[%s] %s", title, label)).
-		AddButtons([]string{"Submit", "Cancel"}).
-		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
-			if buttonLabel == "Submit" {
-				text := input.GetText()
-				app.QueueUpdateDraw(func() {
-					pages.RemovePage("inputModal")
-				})
-				// Send the input text back
-				app.SetFocus(mainView)
-				// Store the input text somewhere accessible
-				// For simplicity, using a global variable or a channel is recommended
-				// Here, we'll just log it
-				logger.Info("User input: %s", text)
-			} else {
-				app.QueueUpdateDraw(func() {
-					pages.RemovePage("inputModal")
-				})
-			}
+	form := tview.NewForm().
+		AddFormItem(input).
+		AddButton("Submit", func() {
+			text := input.GetText()
+			logger.Info("User input: %s", text)
+			callback(text, nil)
+			pages.RemovePage("inputModal")
+			app.SetFocus(mainView)
+		}).
+		AddButton("Cancel", func() {
+			callback("", fmt.Errorf("input cancelled"))
+			pages.RemovePage("inputModal")
+			app.SetFocus(mainView)
 		})
 
 	flex := tview.NewFlex().SetDirection(tview.FlexRow).
-		AddItem(input, 1, 0, true).
-		AddItem(modal, 0, 1, false)
+		AddItem(form, 0, 1, true)
 
 	pages.AddPage("inputModal", flex, true, true)
-
-	// Start a goroutine to wait for user input
-	var userInput string
-	var errResult error
-	done := make(chan struct{})
-
-	go func() {
-		app.Run()
-		userInput = input.GetText()
-		close(done)
-	}()
-
-	<-done
-
-	if userInput == "" {
-		errResult = fmt.Errorf("no input provided")
-	}
-
-	return userInput, errResult
+	app.SetFocus(input)
 }
 
 // PromptConfirmation displays a confirmation modal to the user.
