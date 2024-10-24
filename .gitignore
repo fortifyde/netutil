@@ -25,4 +25,4 @@ go.work.sum
 .env
 
 # project context file
-project.context.txt
+project_context.txt
