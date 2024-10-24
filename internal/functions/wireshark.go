@@ -26,7 +26,7 @@ func StartWiresharkListening(app *tview.Application, pages *tview.Pages, mainVie
 	if os.Geteuid() != 0 {
 		logger.Error("Root access required for Wireshark listening")
 		app.QueueUpdateDraw(func() {
-			uiutil.ShowError(app, pages, "Root access required for Wireshark listening. Please run the program with sudo.", mainView, nil)
+			uiutil.ShowError(app, pages, "rootAccessRequiredModal", "Root access required for Wireshark listening. Please run the program with sudo.", mainView, nil)
 		})
 		return fmt.Errorf("root access required")
 	}
@@ -36,7 +36,7 @@ func StartWiresharkListening(app *tview.Application, pages *tview.Pages, mainVie
 		msg := "Required binaries not found: " + strings.Join(requiredBinaries, ", ")
 		logger.Error(msg)
 		app.QueueUpdateDraw(func() {
-			uiutil.ShowError(app, pages, msg, mainView, nil)
+			uiutil.ShowError(app, pages, "requiredBinariesNotFoundModal", msg, mainView, nil)
 		})
 		return errors.New(msg)
 	}
@@ -44,7 +44,7 @@ func StartWiresharkListening(app *tview.Application, pages *tview.Pages, mainVie
 	if err != nil {
 		logger.Error("Failed to load config: %v", err)
 		app.QueueUpdateDraw(func() {
-			uiutil.ShowError(app, pages, fmt.Sprintf("Failed to load config: %v", err), mainView, nil)
+			uiutil.ShowError(app, pages, "loadConfigErrorModal", fmt.Sprintf("Failed to load config: %v", err), mainView, nil)
 		})
 		return fmt.Errorf("failed to load config: %v", err)
 	}
@@ -66,7 +66,7 @@ func StartWiresharkListening(app *tview.Application, pages *tview.Pages, mainVie
 	if err != nil {
 		logger.Error("Failed to get Ethernet interfaces: %v", err)
 		app.QueueUpdateDraw(func() {
-			uiutil.ShowError(app, pages, fmt.Sprintf("Failed to get Ethernet interfaces: %v", err), mainView, nil)
+			uiutil.ShowError(app, pages, "getEthernetInterfacesErrorModal", fmt.Sprintf("Failed to get Ethernet interfaces: %v", err), mainView, nil)
 		})
 		return fmt.Errorf("failed to get Ethernet interfaces: %v", err)
 	}
@@ -83,7 +83,7 @@ func StartWiresharkListening(app *tview.Application, pages *tview.Pages, mainVie
 	if len(activeInterfaces) == 0 {
 		logger.Error("No active interfaces found")
 		app.QueueUpdateDraw(func() {
-			uiutil.ShowError(app, pages, "No active interfaces found", mainView, nil)
+			uiutil.ShowError(app, pages, "noActiveInterfacesFoundModal", "No active interfaces found", mainView, nil)
 		})
 		return fmt.Errorf("no active interfaces found")
 	}
@@ -98,7 +98,7 @@ func StartWiresharkListening(app *tview.Application, pages *tview.Pages, mainVie
 			interfaceNames[i] = iface.Name
 		}
 
-		uiutil.ShowList(app, pages, "Select Interface for Wireshark", interfaceNames, func(index int) {
+		uiutil.ShowList(app, pages, "selectInterfaceForWiresharkModal", "Select Interface for Wireshark", interfaceNames, func(index int) {
 			selectedInterface = activeInterfaces[index].Name
 		}, mainView)
 
@@ -106,7 +106,7 @@ func StartWiresharkListening(app *tview.Application, pages *tview.Pages, mainVie
 		if selectedInterface == "" {
 			logger.Error("No interface selected")
 			app.QueueUpdateDraw(func() {
-				uiutil.ShowError(app, pages, "No interface selected", mainView, nil)
+				uiutil.ShowError(app, pages, "noInterfaceSelectedModal", "No interface selected", mainView, nil)
 			})
 			return fmt.Errorf("no interface selected")
 		}
@@ -133,7 +133,7 @@ func StartWiresharkListening(app *tview.Application, pages *tview.Pages, mainVie
 	if err != nil {
 		logger.Error("Failed to start Wireshark: %v", err)
 		app.QueueUpdateDraw(func() {
-			uiutil.ShowError(app, pages, "Failed to start Wireshark.", mainView, nil)
+			uiutil.ShowError(app, pages, "startWiresharkErrorModal", "Failed to start Wireshark.", mainView, nil)
 		})
 		return err
 	}
@@ -152,7 +152,7 @@ func StartWiresharkListening(app *tview.Application, pages *tview.Pages, mainVie
 		logger.Error("Failed to start tshark: %v", err)
 		wiresharkCmd.Process.Kill()
 		app.QueueUpdateDraw(func() {
-			uiutil.ShowError(app, pages, "Failed to start tshark.", mainView, nil)
+			uiutil.ShowError(app, pages, "startTsharkErrorModal", "Failed to start tshark.", mainView, nil)
 		})
 		return err
 	}
@@ -165,7 +165,7 @@ func StartWiresharkListening(app *tview.Application, pages *tview.Pages, mainVie
 		if err != nil {
 			logger.Error("tshark capture ended with error: %v", err)
 			app.QueueUpdateDraw(func() {
-				uiutil.ShowError(app, pages, fmt.Sprintf("tshark capture ended with error: %v", err), mainView, nil)
+				uiutil.ShowError(app, pages, "tsharkCaptureErrorModal", fmt.Sprintf("tshark capture ended with error: %v", err), mainView, nil)
 			})
 			return
 		}
@@ -175,18 +175,18 @@ func StartWiresharkListening(app *tview.Application, pages *tview.Pages, mainVie
 		if err != nil {
 			logger.Error("Analysis failed: %v", err)
 			app.QueueUpdateDraw(func() {
-				uiutil.ShowError(app, pages, fmt.Sprintf("Analysis failed: %v", err), mainView, nil)
+				uiutil.ShowError(app, pages, "analysisFailedModal", fmt.Sprintf("Analysis failed: %v", err), mainView, nil)
 			})
 			return
 		}
 
 		// ask user to view results
 		app.QueueUpdateDraw(func() {
-			uiutil.ShowConfirm(app, pages, "Capture and analysis completed and saved in Wireshark folder. Would you like to see the most relevant data?", func(yes bool) {
+			uiutil.ShowConfirm(app, pages, "captureAndAnalysisCompletedModal", "Capture and analysis completed and saved in Wireshark folder. Would you like to see the most relevant data?", func(yes bool) {
 				if yes {
-					uiutil.ShowAnalysisResults(app, pages, results, mainView)
+					uiutil.ShowAnalysisResults(app, pages, "analysisResultsModal", results, mainView)
 				} else {
-					uiutil.ShowMessage(app, pages, "Analysis completed. Results saved in the 'Wireshark/capture_analysis' folder.", mainView)
+					uiutil.ShowMessage(app, pages, "analysisCompletedModal", "Analysis completed. Results saved in the 'Wireshark/capture_analysis' folder.", mainView)
 				}
 			}, mainView)
 		})

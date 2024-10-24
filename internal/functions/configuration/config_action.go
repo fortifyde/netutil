@@ -7,7 +7,6 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/fortifyde/netutil/internal/logger"
 	"github.com/fortifyde/netutil/internal/uiutil"
@@ -107,31 +106,31 @@ func SaveConfig(config *Config) error {
 func EditWorkingDirectory(app *tview.Application, pages *tview.Pages, mainView tview.Primitive) error {
 	cfg, err := LoadConfig()
 	if err != nil {
-		uiutil.ShowError(app, pages, fmt.Sprintf("Failed to load config: %v", err), mainView, nil)
+		uiutil.ShowError(app, pages, "loadConfigErrorModal", fmt.Sprintf("Failed to load config: %v", err), mainView, nil)
 		return err
 	}
 
 	cmd := exec.Command("zenity", "--file-selection", "--directory")
 	output, err := cmd.Output()
 	if err != nil {
-		uiutil.ShowError(app, pages, fmt.Sprintf("Failed to select directory: %v", err), mainView, nil)
+		uiutil.ShowError(app, pages, "selectDirectoryErrorModal", fmt.Sprintf("Failed to select directory: %v", err), mainView, nil)
 		return err
 	}
 
 	newPath := strings.TrimSpace(string(output))
 	if newPath == "" {
-		uiutil.ShowError(app, pages, "No directory path selected", mainView, nil)
+		uiutil.ShowError(app, pages, "noDirectoryPathSelectedModal", "No directory path selected", mainView, nil)
 		return fmt.Errorf("no directory path selected")
 	}
 
 	cfg.WorkingDirectory = newPath
 	err = SaveConfig(cfg)
 	if err != nil {
-		uiutil.ShowError(app, pages, fmt.Sprintf("Failed to save config: %v", err), mainView, nil)
+		uiutil.ShowError(app, pages, "saveConfigErrorModal", fmt.Sprintf("Failed to save config: %v", err), mainView, nil)
 		return err
 	}
 
-	uiutil.ShowTimedMessage(app, pages, fmt.Sprintf("Updated working directory to: %s", cfg.WorkingDirectory), mainView, 3*time.Second)
+	uiutil.ShowMessage(app, pages, "update_working_directory", fmt.Sprintf("Updated working directory to: %s", cfg.WorkingDirectory), mainView)
 	logger.Info("Updated working directory to: %s", cfg.WorkingDirectory)
 
 	return nil

@@ -10,7 +10,7 @@ import (
 // set up main keyboard controls for application
 func SetupKeyboardControls(app *tview.Application, menu *tview.List, toolbox *tview.List, pages *tview.Pages) {
 	app.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
-		if uiutil.IsFloatingBoxActive {
+		if uiutil.GetFloatingBoxActive() {
 			return event
 		}
 

@@ -26,7 +26,7 @@ func StartDiscoveryScan(app *tview.Application, pages *tview.Pages, mainView tvi
 		arpScanFile := filepath.Join(hostfilesDir, "arp_scan.txt")
 		if err := scanners.PerformARPscan(ipRange, arpScanFile); err != nil {
 			logger.Error("ARP Scan failed: %v", err)
-			uiutil.ShowError(app, pages, fmt.Sprintf("ARP Scan failed: %v", err), mainView, nil)
+			uiutil.ShowError(app, pages, "arpScanErrorModal", fmt.Sprintf("ARP Scan failed: %v", err), mainView, nil)
 			// Non-critical: Continue scanning
 		}
 
@@ -35,7 +35,7 @@ func StartDiscoveryScan(app *tview.Application, pages *tview.Pages, mainView tvi
 		pingScanFile := filepath.Join(hostfilesDir, "ping_scan.txt")
 		if err := scanners.PerformPingScan(ipRange, pingScanFile); err != nil {
 			logger.Error("Ping Scan failed: %v", err)
-			uiutil.ShowError(app, pages, fmt.Sprintf("Ping Scan failed: %v", err), mainView, nil)
+			uiutil.ShowError(app, pages, "pingScanErrorModal", fmt.Sprintf("Ping Scan failed: %v", err), mainView, nil)
 			// Non-critical: Continue scanning
 		}
 
@@ -44,7 +44,7 @@ func StartDiscoveryScan(app *tview.Application, pages *tview.Pages, mainView tvi
 		dnsLookupFile := filepath.Join(hostfilesDir, "dns_reverse_lookup.txt")
 		if err := scanners.PerformDNSReverseLookup(pingScanFile, dnsLookupFile); err != nil {
 			logger.Error("DNS Reverse Lookup failed: %v", err)
-			uiutil.ShowError(app, pages, fmt.Sprintf("DNS Reverse Lookup failed: %v", err), mainView, nil)
+			uiutil.ShowError(app, pages, "dnsReverseLookupErrorModal", fmt.Sprintf("DNS Reverse Lookup failed: %v", err), mainView, nil)
 			// Non-critical: Continue scanning
 		}
 
@@ -53,7 +53,7 @@ func StartDiscoveryScan(app *tview.Application, pages *tview.Pages, mainView tvi
 		windowsDiscoveryFile := filepath.Join(hostfilesDir, "windows_os_discovery.txt")
 		if err := scanners.PerformWindowsOSDiscovery(ipRange, windowsDiscoveryFile); err != nil {
 			logger.Error("Windows OS Discovery failed: %v", err)
-			uiutil.ShowError(app, pages, fmt.Sprintf("Windows OS Discovery failed: %v", err), mainView, nil)
+			uiutil.ShowError(app, pages, "windowsOSDiscoveryErrorModal", fmt.Sprintf("Windows OS Discovery failed: %v", err), mainView, nil)
 			// Non-critical: Continue scanning
 		}
 
@@ -78,12 +78,12 @@ func StartDiscoveryScan(app *tview.Application, pages *tview.Pages, mainView tvi
 		nmapScanFile := filepath.Join(nmapOutputDir, "nmap_discovery_scan.xml")
 		if err := scanners.PerformNmapScan(hostfilePath, nmapScanFile); err != nil {
 			logger.Error("Nmap Discovery Scan failed: %v", err)
-			uiutil.ShowError(app, pages, fmt.Sprintf("Nmap Discovery Scan failed: %v", err), mainView, nil)
+			uiutil.ShowError(app, pages, "nmapDiscoveryScanErrorModal", fmt.Sprintf("Nmap Discovery Scan failed: %v", err), mainView, nil)
 			// Non-critical: Continue
 		}
 
 		// Step 8: Notify the user of completion
-		uiutil.ShowMessage(app, pages, "Discovery Scan completed successfully.", mainView)
+		uiutil.ShowMessage(app, pages, "scan_complete_modal", "Discovery Scan completed successfully.", mainView)
 		logger.Info("Discovery Scan completed successfully")
 	}
 
@@ -91,7 +91,7 @@ func StartDiscoveryScan(app *tview.Application, pages *tview.Pages, mainView tvi
 	var proceedWithScan func(ipRange, selectedInterface, vlanID string)
 	proceedWithScan = func(ipRange, selectedInterface, vlanID string) {
 		// Step 3: Ask user to enter a name for the directory
-		uiutil.PromptInput(app, pages, "Discovery Scan", "Enter directory name for hostfiles:", mainView, func(dirName string, err error) {
+		uiutil.PromptInput(app, pages, "dirNameInputModal", "Discovery Scan", "Enter directory name for hostfiles:", mainView, func(dirName string, err error) {
 			if err != nil {
 				// User canceled the prompt
 				logger.Info("User canceled the Discovery Scan.")
@@ -100,7 +100,7 @@ func StartDiscoveryScan(app *tview.Application, pages *tview.Pages, mainView tvi
 
 			dirName = strings.TrimSpace(dirName)
 			if dirName == "" {
-				uiutil.ShowError(app, pages, "Directory name cannot be empty. Please enter a valid name.", mainView, nil)
+				uiutil.ShowError(app, pages, "dirNameErrorModal", "Directory name cannot be empty. Please enter a valid name.", mainView, nil)
 				proceedWithScan(ipRange, selectedInterface, vlanID)
 				return
 			}
@@ -130,7 +130,9 @@ func StartDiscoveryScan(app *tview.Application, pages *tview.Pages, mainView tvi
 	// Function to prompt for Interface
 	var promptInterface func(ipRange string)
 	promptInterface = func(ipRange string) {
-		uiutil.PromptInput(app, pages, "Discovery Scan", "Enter interface (e.g., eth0 or eth0.10):", mainView, func(input string, err error) {
+		// Implement the logic to prompt the user to select an interface
+		// Generate a unique modal name, e.g., "interfaceInputModal"
+		uiutil.PromptInput(app, pages, "interfaceInputModal", "Discovery Scan", "Enter interface (e.g., eth0 or eth0.10):", mainView, func(input string, err error) {
 			if err != nil {
 				// User canceled the prompt
 				logger.Info("User canceled the Discovery Scan.")
@@ -139,7 +141,7 @@ func StartDiscoveryScan(app *tview.Application, pages *tview.Pages, mainView tvi
 
 			input = strings.TrimSpace(input)
 			if input == "" {
-				uiutil.ShowError(app, pages, "Interface cannot be empty. Please enter a valid interface.", mainView, nil)
+				uiutil.ShowError(app, pages, "interfaceErrorModal", "Interface cannot be empty. Please enter a valid interface.", mainView, nil)
 				promptInterface(ipRange)
 				return
 			}
@@ -161,7 +163,7 @@ func StartDiscoveryScan(app *tview.Application, pages *tview.Pages, mainView tvi
 	// Function to prompt for IP range
 	var promptIPRange func()
 	promptIPRange = func() {
-		uiutil.PromptInput(app, pages, "Discovery Scan", "Enter IP range to scan (e.g., 192.168.1.0/24):", mainView, func(ipRange string, err error) {
+		uiutil.PromptInput(app, pages, "ipRangeInputModal", "Discovery Scan", "Enter IP range to scan (e.g., 192.168.1.0/24):", mainView, func(ipRange string, err error) {
 			if err != nil {
 				// User canceled the prompt
 				logger.Info("User canceled the Discovery Scan.")
@@ -169,7 +171,7 @@ func StartDiscoveryScan(app *tview.Application, pages *tview.Pages, mainView tvi
 			}
 			ipRange = strings.TrimSpace(ipRange)
 			if ipRange == "" {
-				uiutil.ShowError(app, pages, "IP range cannot be empty. Please enter a valid IP range.", mainView, nil)
+				uiutil.ShowError(app, pages, "ipRangeErrorModal", "IP range cannot be empty. Please enter a valid IP range.", mainView, nil)
 				promptIPRange()
 				return
 			}
@@ -177,7 +179,7 @@ func StartDiscoveryScan(app *tview.Application, pages *tview.Pages, mainView tvi
 
 			// Validate IP range
 			if _, _, err := net.ParseCIDR(ipRange); err != nil {
-				uiutil.ShowError(app, pages, "Invalid IP range format. Please try again.", mainView, nil)
+				uiutil.ShowError(app, pages, "ipRangeFormatErrorModal", "Invalid IP range format. Please try again.", mainView, nil)
 				promptIPRange()
 				return
 			}
@@ -189,17 +191,20 @@ func StartDiscoveryScan(app *tview.Application, pages *tview.Pages, mainView tvi
 			}
 
 			if detectedInterface != "" {
-				// Ask user to confirm the detected interface
-				uiutil.PromptConfirmation(app, pages, "Discovery Scan", fmt.Sprintf("Detected interface for IP range %s: %s. Do you want to use this interface?", ipRange, detectedInterface), func(confirm bool, err error) {
-					if err != nil || !confirm {
-						// User declined, prompt to enter their own choice
-						promptInterface(ipRange)
-						return
-					}
-					// User confirmed the detected interface
-					selectedInterface := detectedInterface
-					proceedWithScan(ipRange, selectedInterface, vlanID)
-				}, mainView)
+				// Use goroutine to safely update the UI
+				go app.QueueUpdateDraw(func() {
+					// Generate a unique modal name for confirmation, e.g., "confirmInterfaceModal"
+					uiutil.PromptConfirmation(app, pages, "confirmInterfaceModal", "Discovery Scan", fmt.Sprintf("Detected interface for IP range %s: %s. Do you want to use this interface?", ipRange, detectedInterface), func(confirm bool, err error) {
+						if err != nil || !confirm {
+							// User declined, prompt to enter their own choice
+							promptInterface(ipRange)
+							return
+						}
+						// User confirmed the detected interface
+						selectedInterface := detectedInterface
+						proceedWithScan(ipRange, selectedInterface, vlanID)
+					}, mainView)
+				})
 			} else {
 				// No interface detected, prompt user to enter their own choice
 				promptInterface(ipRange)

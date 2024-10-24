@@ -162,7 +162,7 @@ func SaveNetworkConfig(app *tview.Application, pages *tview.Pages, mainView tvie
 	// get default route
 	defaultRoute, err := getDefaultRoute()
 	if err != nil {
-		uiutil.ShowError(app, pages, fmt.Sprintf("Failed to get default route: %v", err), mainView, nil)
+		uiutil.ShowError(app, pages, "getDefaulRouteErrorModal", fmt.Sprintf("Failed to get default route: %v", err), mainView, nil)
 	} else {
 		cfg.DefaultRoute = defaultRoute
 	}
@@ -221,7 +221,7 @@ func SaveNetworkConfig(app *tview.Application, pages *tview.Pages, mainView tvie
 	}
 
 	logger.Info("Network configuration saved successfully")
-	uiutil.ShowMessage(app, pages, "Network configuration saved successfully", mainView)
+	uiutil.ShowMessage(app, pages, "saveNetworkConfigSuccessModal", "Network configuration saved successfully", mainView)
 	return nil
 }
 
@@ -239,30 +239,30 @@ func LoadAndApplyNetworkConfig(app *tview.Application, pages *tview.Pages, mainV
 	}
 
 	if len(cfg.NetworkInterfaces) == 0 {
-		uiutil.ShowMessage(app, pages, "No saved network configuration found", mainView)
+		uiutil.ShowMessage(app, pages, "noSavedNetworkConfigModal", "No saved network configuration found", mainView)
 		return nil
 	}
 
 	for ifaceName, state := range cfg.NetworkInterfaces {
 		err := applyInterfaceConfig(ifaceName, state)
 		if err != nil {
-			uiutil.ShowError(app, pages, fmt.Sprintf("Failed to apply config for interface %s: %v", ifaceName, err), mainView, nil)
+			uiutil.ShowError(app, pages, "applyConfigErrorModal", fmt.Sprintf("Failed to apply config for interface %s: %v", ifaceName, err), mainView, nil)
 		} else {
-			uiutil.ShowMessage(app, pages, fmt.Sprintf("Configuration applied for interface %s", ifaceName), mainView)
+			uiutil.ShowMessage(app, pages, "applyConfigSuccessModal", fmt.Sprintf("Configuration applied for interface %s", ifaceName), mainView)
 		}
 	}
 
 	if cfg.DefaultRoute != "" {
 		err := applyDefaultRoute(cfg.DefaultRoute)
 		if err != nil {
-			uiutil.ShowError(app, pages, fmt.Sprintf("Failed to apply default route: %v", err), mainView, nil)
+			uiutil.ShowError(app, pages, "applyDefaultRouteErrorModal", fmt.Sprintf("Failed to apply default route: %v", err), mainView, nil)
 		} else {
-			uiutil.ShowMessage(app, pages, "Default route applied successfully", mainView)
+			uiutil.ShowMessage(app, pages, "applyDefaultRouteSuccessModal", "Default route applied successfully", mainView)
 		}
 	}
 
 	logger.Info("Network configuration applied successfully")
-	uiutil.ShowMessage(app, pages, "Network configuration applied successfully", mainView)
+	uiutil.ShowMessage(app, pages, "applyNetworkConfigSuccessModal", "Network configuration applied successfully", mainView)
 	return nil
 }
 

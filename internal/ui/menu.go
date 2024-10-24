@@ -82,15 +82,15 @@ func RunApp() error {
 						functions.ToggleEthernetInterfaces(app, pages, toolbox)
 					case "Edit Working Directory":
 						if err := configuration.EditWorkingDirectory(app, pages, toolbox); err != nil {
-							uiutil.ShowError(app, pages, fmt.Sprintf("Error: %s", err), toolbox, nil)
+							uiutil.ShowError(app, pages, "editWorkingDirectoryErrorModal", fmt.Sprintf("Error: %s", err), toolbox, nil)
 						}
 					case "Save Network Config":
 						if err := functions.SaveNetworkConfig(app, pages, toolbox); err != nil {
-							uiutil.ShowError(app, pages, fmt.Sprintf("Error: %s", err), toolbox, nil)
+							uiutil.ShowError(app, pages, "saveNetworkConfigErrorModal", fmt.Sprintf("Error: %s", err), toolbox, nil)
 						}
 					case "Load Network Config":
 						if err := functions.LoadAndApplyNetworkConfig(app, pages, toolbox); err != nil {
-							uiutil.ShowError(app, pages, fmt.Sprintf("Error: %s", err), toolbox, nil)
+							uiutil.ShowError(app, pages, "loadNetworkConfigErrorModal", fmt.Sprintf("Error: %s", err), toolbox, nil)
 						}
 					}
 				case "Network Recon":
@@ -98,16 +98,16 @@ func RunApp() error {
 					case "Wireshark Listening":
 						err := functions.StartWiresharkListening(app, pages, toolbox)
 						if err != nil {
-							uiutil.ShowError(app, pages, fmt.Sprintf("Wireshark listening error: %v", err), toolbox, nil)
+							uiutil.ShowError(app, pages, "wiresharkListeningErrorModal", fmt.Sprintf("Wireshark listening error: %v", err), toolbox, nil)
 						}
 					case "Discovery Scan":
 						err := functions.StartDiscoveryScan(app, pages, toolbox)
 						if err != nil {
-							uiutil.ShowError(app, pages, fmt.Sprintf("Discovery Scan error: %v", err), toolbox, nil)
+							uiutil.ShowError(app, pages, "discoveryScanErrorModal", fmt.Sprintf("Discovery Scan error: %v", err), toolbox, nil)
 						}
 					}
 				default:
-					uiutil.ShowMessage(app, pages, fmt.Sprintf("Function '%s' not implemented yet", function), toolbox)
+					uiutil.ShowMessage(app, pages, "functionNotImplementedModal", fmt.Sprintf("Function '%s' not implemented yet", function), toolbox)
 				}
 			})
 		}

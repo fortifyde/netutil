@@ -22,13 +22,13 @@ func ToggleEthernetInterfaces(app *tview.Application, pages *tview.Pages, mainVi
 	interfaces, err := utils.GetEthernetInterfaces()
 	if err != nil {
 		logger.Error("Failed to get Ethernet interfaces: %v", err)
-		uiutil.ShowError(app, pages, "Error getting interfaces: "+err.Error(), mainView, nil)
+		uiutil.ShowError(app, pages, "getEthernetInterfacesErrorModal", "Error getting interfaces: "+err.Error(), mainView, nil)
 		return
 	}
 
 	if len(interfaces) == 0 {
 		logger.Info("No Ethernet interfaces found")
-		uiutil.ShowMessage(app, pages, "No Ethernet interfaces found.", mainView)
+		uiutil.ShowMessage(app, pages, "noEthernetInterfacesFoundModal", "No Ethernet interfaces found.", mainView)
 		return
 	}
 
@@ -43,7 +43,7 @@ func toggleSingleInterface(app *tview.Application, pages *tview.Pages, iface net
 	currentStatus, err := getInterfaceStatus(iface.Name)
 	if err != nil {
 		logger.Error("Failed to get status for interface %s: %v", iface.Name, err)
-		uiutil.ShowError(app, pages, fmt.Sprintf("Error: %v", err), mainView, nil)
+		uiutil.ShowError(app, pages, "getInterfaceStatusErrorModal", fmt.Sprintf("Error: %v", err), mainView, nil)
 		return
 	}
 
@@ -53,16 +53,16 @@ func toggleSingleInterface(app *tview.Application, pages *tview.Pages, iface net
 	}
 
 	// Confirm action
-	uiutil.ShowConfirm(app, pages, fmt.Sprintf("Are you sure you want to set interface %s to %s?", iface.Name, newStatus), func(yes bool) {
+	uiutil.ShowConfirm(app, pages, "toggleInterfaceConfirmModal", fmt.Sprintf("Are you sure you want to set interface %s to %s?", iface.Name, newStatus), func(yes bool) {
 		if yes {
 			err := setInterfaceStatus(iface.Name, newStatus)
 			if err != nil {
 				logger.Error("Failed to set interface %s to %s: %v", iface.Name, newStatus, err)
-				uiutil.ShowError(app, pages, fmt.Sprintf("Error: %v", err), mainView, nil)
+				uiutil.ShowError(app, pages, "setInterfaceStatusErrorModal", fmt.Sprintf("Error: %v", err), mainView, nil)
 				return
 			}
 			logger.Info("Interface %s set to %s", iface.Name, newStatus)
-			uiutil.ShowMessage(app, pages, fmt.Sprintf("Interface %s set to %s.", iface.Name, newStatus), mainView)
+			uiutil.ShowMessage(app, pages, "setInterfaceStatusSuccessModal", fmt.Sprintf("Interface %s set to %s.", iface.Name, newStatus), mainView)
 		} else {
 			logger.Info("User canceled toggling interface %s", iface.Name)
 		}
@@ -77,7 +77,7 @@ func showInterfaceList(app *tview.Application, pages *tview.Pages, interfaces []
 	}
 	items[len(interfaces)] = "Cancel"
 
-	uiutil.ShowList(app, pages, "Select Ethernet Interface to Toggle", items, func(index int) {
+	uiutil.ShowList(app, pages, "selectEthernetInterfaceToToggleModal", "Select Ethernet Interface to Toggle", items, func(index int) {
 		if index < len(interfaces) {
 			toggleInterface(app, pages, interfaces[index].Name, mainView)
 		}
@@ -89,7 +89,7 @@ func toggleInterface(app *tview.Application, pages *tview.Pages, name string, ma
 	status, err := getInterfaceStatus(name)
 	if err != nil {
 		logger.Error("Failed to get status for interface %s: %v", name, err)
-		uiutil.ShowError(app, pages, "Error getting interface status: "+err.Error(), mainView, nil)
+		uiutil.ShowError(app, pages, "getInterfaceStatusErrorModal", "Error getting interface status: "+err.Error(), mainView, nil)
 		return
 	}
 
@@ -102,10 +102,10 @@ func toggleInterface(app *tview.Application, pages *tview.Pages, name string, ma
 	err = setInterfaceStatus(name, newStatus)
 	if err != nil {
 		logger.Error("Failed to set interface %s to %s: %v", name, newStatus, err)
-		uiutil.ShowError(app, pages, fmt.Sprintf("Error setting interface %s to %s: %s\n\n[red]root access needed!\n", name, newStatus, err.Error()), mainView, nil)
+		uiutil.ShowError(app, pages, "setInterfaceStatusErrorModal", fmt.Sprintf("Error setting interface %s to %s: %s\n\n[red]root access needed!\n", name, newStatus, err.Error()), mainView, nil)
 	} else {
 		logger.Info("Successfully set interface %s to %s", name, newStatus)
-		uiutil.ShowMessage(app, pages, fmt.Sprintf("Interface %s has been set to %s.", name, newStatus), mainView)
+		uiutil.ShowMessage(app, pages, "setInterfaceStatusSuccessModal", fmt.Sprintf("Interface %s has been set to %s.", name, newStatus), mainView)
 	}
 }
 

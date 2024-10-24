@@ -8,25 +8,26 @@ import (
 )
 
 // CloseInputModal gracefully closes the Input Prompt Modal window.
-func CloseInputModal(app *tview.Application, pages *tview.Pages, mainView tview.Primitive) {
-	IsFloatingBoxActive = false
-	pages.RemovePage("inputModal")
+func CloseInputModal(app *tview.Application, pages *tview.Pages, modalName string, mainView tview.Primitive) {
+	pages.RemovePage(modalName)
+	SetFloatingBoxActive(false)
 	if mainView != nil {
 		app.SetFocus(mainView)
 	}
 }
 
 // CloseConfirmModal gracefully closes the Confirmation Prompt Modal window.
-func CloseConfirmModal(app *tview.Application, pages *tview.Pages, mainView tview.Primitive) {
-	IsFloatingBoxActive = false
-	pages.RemovePage("confirmModal")
+func CloseConfirmModal(app *tview.Application, pages *tview.Pages, modalName string, mainView tview.Primitive) {
+	pages.RemovePage(modalName)
+	SetFloatingBoxActive(false)
 	if mainView != nil {
 		app.SetFocus(mainView)
 	}
 }
 
 // PromptInput displays a modal to get input from the user.
-func PromptInput(app *tview.Application, pages *tview.Pages, title, label string, mainView tview.Primitive, callback func(string, error), prefill ...string) {
+// modalName should be unique for each invocation.
+func PromptInput(app *tview.Application, pages *tview.Pages, modalName, title, label string, mainView tview.Primitive, callback func(string, error), prefill ...string) {
 	input := tview.NewInputField().
 		SetLabel(label).
 		SetFieldWidth(40)
@@ -41,11 +42,11 @@ func PromptInput(app *tview.Application, pages *tview.Pages, title, label string
 			text := input.GetText()
 			logger.Info("User input: %s", text)
 			callback(text, nil)
-			CloseInputModal(app, pages, mainView)
+			CloseInputModal(app, pages, modalName, mainView)
 		}).
 		AddButton("Cancel", func() {
 			callback("", fmt.Errorf("input canceled"))
-			CloseInputModal(app, pages, mainView)
+			CloseInputModal(app, pages, modalName, mainView)
 		})
 
 	form.SetBorder(true).SetTitle(title).SetTitleAlign(tview.AlignCenter)
@@ -56,13 +57,14 @@ func PromptInput(app *tview.Application, pages *tview.Pages, title, label string
 		AddItem(nil, 0, 1, false)
 
 	// Open the modal
-	pages.AddPage("inputModal", flex, true, true)
+	pages.AddPage(modalName, flex, true, true)
 	app.SetFocus(input)
-	IsFloatingBoxActive = true
+	SetFloatingBoxActive(true)
 }
 
 // PromptConfirmation displays a confirmation modal to the user.
-func PromptConfirmation(app *tview.Application, pages *tview.Pages, title, message string, callback func(bool, error), mainView tview.Primitive) {
+// modalName should be unique for each invocation.
+func PromptConfirmation(app *tview.Application, pages *tview.Pages, modalName, title, message string, callback func(bool, error), mainView tview.Primitive) {
 	modal := tview.NewModal().
 		SetText(fmt.Sprintf("[%s] %s", title, message)).
 		AddButtons([]string{"Yes", "No"}).
@@ -72,7 +74,7 @@ func PromptConfirmation(app *tview.Application, pages *tview.Pages, title, messa
 			} else {
 				callback(false, fmt.Errorf("user declined"))
 			}
-			CloseConfirmModal(app, pages, mainView)
+			CloseConfirmModal(app, pages, modalName, mainView)
 		})
 
 	modal.SetBorder(true).SetTitle(title).SetTitleAlign(tview.AlignCenter)
@@ -83,7 +85,7 @@ func PromptConfirmation(app *tview.Application, pages *tview.Pages, title, messa
 		AddItem(nil, 0, 1, false)
 
 	// Open the modal
-	pages.AddPage("confirmModal", flex, true, true)
+	pages.AddPage(modalName, flex, true, true)
 	app.SetFocus(modal)
-	IsFloatingBoxActive = true
+	SetFloatingBoxActive(true)
 }
