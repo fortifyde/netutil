@@ -1,4 +1,4 @@
-package functions
+package configuration
 
 import (
 	"bufio"

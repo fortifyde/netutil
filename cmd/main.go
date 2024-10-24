@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/fortifyde/netutil/internal/functions"
+	"github.com/fortifyde/netutil/internal/functions/configuration"
 	"github.com/fortifyde/netutil/internal/logger"
 	"github.com/fortifyde/netutil/internal/ui"
 	"github.com/rivo/tview"
@@ -14,7 +14,7 @@ func main() {
 	app := tview.NewApplication()
 	primitive := tview.NewBox()
 
-	cfg, err := functions.ReadWriteConfig(app, primitive)
+	cfg, err := configuration.ReadWriteConfig(app, primitive)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Failed to read/write config: %v\n", err)
 		os.Exit(1)

@@ -54,11 +54,12 @@ func RunApp() error {
 		SetSelectedBackgroundColor(pkg.NordHighlight).
 		SetMainTextColor(pkg.NordFg)
 	menu.SetBorder(true).SetTitle("Main Menu").SetTitleAlign(tview.AlignLeft)
+
 	categories := []string{"System Configuration", "Network Recon", "Category 3", "Category 4", "Category 5"}
 	categoryContents := make(map[string][]string)
 
 	categoryContents["System Configuration"] = []string{"Check and toggle interfaces", "Edit Working Directory", "Save Network Config", "Load Network Config"}
-	categoryContents["Network Recon"] = []string{"Wireshark Listening"}
+	categoryContents["Network Recon"] = []string{"Wireshark Listening", "Discovery Scan"} // Added "Discovery Scan"
 
 	for _, category := range categories {
 		menu.AddItem(category, "", 0, nil)
@@ -97,6 +98,11 @@ func RunApp() error {
 						err := functions.StartWiresharkListening(app, pages, toolbox)
 						if err != nil {
 							uiutil.ShowError(app, pages, fmt.Sprintf("Wireshark listening error: %v", err), toolbox, nil)
+						}
+					case "Discovery Scan":
+						err := functions.StartDiscoveryScan(app, pages, toolbox)
+						if err != nil {
+							uiutil.ShowError(app, pages, fmt.Sprintf("Discovery Scan error: %v", err), toolbox, nil)
 						}
 					}
 				default:

@@ -11,6 +11,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/fortifyde/netutil/internal/functions/configuration"
+	"github.com/fortifyde/netutil/internal/functions/utils"
 	"github.com/fortifyde/netutil/internal/logger"
 	"github.com/fortifyde/netutil/internal/uiutil"
 	"github.com/rivo/tview"
@@ -30,7 +32,7 @@ func StartWiresharkListening(app *tview.Application, pages *tview.Pages, mainVie
 	}
 
 	requiredBinaries := []string{"wireshark", "tshark"}
-	if !CheckDependencies(requiredBinaries) {
+	if !utils.CheckDependencies(requiredBinaries) {
 		msg := "Required binaries not found: " + strings.Join(requiredBinaries, ", ")
 		logger.Error(msg)
 		app.QueueUpdateDraw(func() {
@@ -38,7 +40,7 @@ func StartWiresharkListening(app *tview.Application, pages *tview.Pages, mainVie
 		})
 		return errors.New(msg)
 	}
-	cfg, err := LoadConfig()
+	cfg, err := configuration.LoadConfig()
 	if err != nil {
 		logger.Error("Failed to load config: %v", err)
 		app.QueueUpdateDraw(func() {
@@ -51,16 +53,16 @@ func StartWiresharkListening(app *tview.Application, pages *tview.Pages, mainVie
 	analysisDir := filepath.Join(captureDir, "capture_analysis")
 
 	// ensure capture and analysisdirectories exist
-	if err := EnsureDir(captureDir); err != nil {
+	if err := utils.EnsureDir(captureDir); err != nil {
 		logger.Error("Failed to create capture directory: %v", err)
 		return err
 	}
-	if err := EnsureDir(analysisDir); err != nil {
+	if err := utils.EnsureDir(analysisDir); err != nil {
 		logger.Error("Failed to create analysis directory: %v", err)
 		return err
 	}
 	// get available interfaces
-	interfaces, err := GetEthernetInterfaces()
+	interfaces, err := utils.GetEthernetInterfaces()
 	if err != nil {
 		logger.Error("Failed to get Ethernet interfaces: %v", err)
 		app.QueueUpdateDraw(func() {

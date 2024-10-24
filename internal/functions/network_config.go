@@ -9,6 +9,8 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/fortifyde/netutil/internal/functions/configuration"
+	"github.com/fortifyde/netutil/internal/functions/utils"
 	"github.com/fortifyde/netutil/internal/logger"
 	"github.com/fortifyde/netutil/internal/uiutil"
 	"github.com/rivo/tview"
@@ -81,7 +83,7 @@ func getInterfaceLinkState(ifaceName string) (string, error) {
 	return "unknown", nil
 }
 
-func applyInterfaceConfig(ifaceName string, state InterfaceState) error {
+func applyInterfaceConfig(ifaceName string, state configuration.InterfaceState) error {
 	logger.Info("Applying configuration for interface: %s", ifaceName)
 	if err := checkElevatedAccess(); err != nil {
 		return err
@@ -144,19 +146,19 @@ func subnetMaskToCIDR(subnetMask string) string {
 
 func SaveNetworkConfig(app *tview.Application, pages *tview.Pages, mainView tview.Primitive) error {
 	logger.Info("Saving network configuration")
-	interfaces, err := GetEthernetInterfaces()
+	interfaces, err := utils.GetEthernetInterfaces()
 	if err != nil {
 		logger.Error("Failed to get Ethernet interfaces: %v", err)
 		return fmt.Errorf("failed to get Ethernet interfaces: %v", err)
 	}
 
-	cfg, err := LoadConfig()
+	cfg, err := configuration.LoadConfig()
 	if err != nil {
 		logger.Error("Failed to load config: %v", err)
 		return fmt.Errorf("failed to load config: %v", err)
 	}
 
-	cfg.NetworkInterfaces = make(map[string]InterfaceState)
+	cfg.NetworkInterfaces = make(map[string]configuration.InterfaceState)
 	// get default route
 	defaultRoute, err := getDefaultRoute()
 	if err != nil {
@@ -184,35 +186,36 @@ func SaveNetworkConfig(app *tview.Application, pages *tview.Pages, mainView tvie
 				return fmt.Errorf("failed to get IP config for interface %s: %v", iface.Name, err)
 			}
 
-			subinterfaceNames, err := GetSubinterfaces(iface.Name)
+			subinterfaceNames, err := utils.GetSubinterfaces(iface.Name)
 			if err != nil {
 				return fmt.Errorf("failed to get subinterfaces for interface %s: %v", iface.Name, err)
 			}
 
-			var subinterfaces []SubinterfaceState
+			var subinterfaces []configuration.SubinterfaceState
 			for _, subName := range subinterfaceNames {
 				subIP, subMask, err := getInterfaceIPConfig(subName)
 				if err != nil {
 					return fmt.Errorf("failed to get IP config for subinterface %s: %v", subName, err)
 				}
-				subinterfaces = append(subinterfaces, SubinterfaceState{
+				subinterfaces = append(subinterfaces, configuration.SubinterfaceState{
 					Name:       subName,
 					IPAddress:  subIP,
 					SubnetMask: subMask,
 				})
 			}
 
-			cfg.NetworkInterfaces[iface.Name] = InterfaceState{
+			cfg.NetworkInterfaces[iface.Name] = configuration.InterfaceState{
 				Status:        status,
 				IPAddress:     ipAddress,
 				SubnetMask:    subnetMask,
 				LinkState:     linkState,
 				Subinterfaces: subinterfaces,
 			}
+
 		}
 	}
 
-	err = SaveConfig(cfg)
+	err = configuration.SaveConfig(cfg)
 	if err != nil {
 		return fmt.Errorf("failed to save config: %v", err)
 	}
@@ -230,7 +233,7 @@ func LoadAndApplyNetworkConfig(app *tview.Application, pages *tview.Pages, mainV
 		return fmt.Errorf("elevated access required to apply network config: %v", err)
 	}
 
-	cfg, err := LoadConfig()
+	cfg, err := configuration.LoadConfig()
 	if err != nil {
 		return fmt.Errorf("failed to load config: %v", err)
 	}

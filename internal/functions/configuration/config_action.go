@@ -1,4 +1,4 @@
-package functions
+package configuration
 
 import (
 	"encoding/json"
@@ -40,66 +40,67 @@ type SubinterfaceState struct {
 
 const configFileName = "netutil.json"
 
-// ReadConfig reads the configuration from the config file.
-func ReadConfig() (*Config, error) {
-	configPath := filepath.Join(".config", "netutil", configFileName)
-	file, err := os.Open(configPath)
+func getConfigFilePath() string {
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		panic(fmt.Sprintf("Failed to get user home directory: %v", err))
+	}
+
+	configDir := filepath.Join(homeDir, ".config")
+	configFilePath := filepath.Join(configDir, configFileName)
+
+	// check if exists, create if not
+	if _, err := os.Stat(configDir); os.IsNotExist(err) {
+		err = os.Mkdir(configDir, os.ModePerm)
+		if err != nil {
+			panic(fmt.Sprintf("Failed to create .config directory: %v", err))
+		}
+	}
+
+	return configFilePath
+}
+
+func LoadConfig() (*Config, error) {
+	file, err := os.Open(getConfigFilePath())
 	if err != nil {
 		if os.IsNotExist(err) {
-			// Return default config if file does not exist
-			return &Config{
-				WorkingDirectory:  getDefaultWorkingDirectory(),
-				NetworkInterfaces: make(map[string]InterfaceState),
-				DefaultRoute:      "",
-			}, nil
+			return &Config{}, nil
 		}
-		return nil, fmt.Errorf("failed to open config file: %v", err)
+		return nil, err
 	}
 	defer file.Close()
 
+	var config Config
 	decoder := json.NewDecoder(file)
-	var cfg Config
-	if err := decoder.Decode(&cfg); err != nil {
-		return nil, fmt.Errorf("failed to decode config file: %v", err)
+	err = decoder.Decode(&config)
+	if err != nil {
+		return nil, err
 	}
 
-	return &cfg, nil
+	logger.Info("Config loaded successfully")
+	return &config, nil
 }
 
-// WriteConfig writes the configuration to the config file.
-func WriteConfig(cfg *Config) error {
-	configDir := filepath.Join(".config", "netutil")
-	if err := os.MkdirAll(configDir, 0755); err != nil {
-		return fmt.Errorf("failed to create config directory: %v", err)
-	}
-	configPath := filepath.Join(configDir, configFileName)
-	file, err := os.Create(configPath)
+func SaveConfig(config *Config) error {
+	file, err := os.Create(getConfigFilePath())
 	if err != nil {
-		return fmt.Errorf("failed to create config file: %v", err)
+		return err
 	}
 	defer file.Close()
 
 	encoder := json.NewEncoder(file)
 	encoder.SetIndent("", "  ")
-	if err := encoder.Encode(cfg); err != nil {
-		return fmt.Errorf("failed to encode config to file: %v", err)
-	}
-
-	return nil
-}
-
-// getDefaultWorkingDirectory returns the default working directory path.
-func getDefaultWorkingDirectory() string {
-	homeDir, err := os.UserHomeDir()
+	err = encoder.Encode(config)
 	if err != nil {
-		logger.Critical("Failed to get user home directory: %v", err)
-		os.Exit(1)
+		return err
 	}
-	return filepath.Join(homeDir, "netutil_working_dir")
+
+	logger.Info("Config saved successfully")
+	return encoder.Encode(config)
 }
 
 func EditWorkingDirectory(app *tview.Application, pages *tview.Pages, mainView tview.Primitive) error {
-	cfg, err := ReadConfig()
+	cfg, err := LoadConfig()
 	if err != nil {
 		uiutil.ShowError(app, pages, fmt.Sprintf("Failed to load config: %v", err), mainView, nil)
 		return err
@@ -119,7 +120,7 @@ func EditWorkingDirectory(app *tview.Application, pages *tview.Pages, mainView t
 	}
 
 	cfg.WorkingDirectory = newPath
-	err = WriteConfig(cfg)
+	err = SaveConfig(cfg)
 	if err != nil {
 		uiutil.ShowError(app, pages, fmt.Sprintf("Failed to save config: %v", err), mainView, nil)
 		return err

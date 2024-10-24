@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"strings"
 
+	"github.com/fortifyde/netutil/internal/functions/utils"
 	"github.com/fortifyde/netutil/internal/logger"
 	"github.com/fortifyde/netutil/internal/uiutil"
 	"github.com/rivo/tview"
@@ -18,7 +19,7 @@ import (
 
 func ToggleEthernetInterfaces(app *tview.Application, pages *tview.Pages, mainView tview.Primitive) {
 	logger.Info("Toggling Ethernet interfaces")
-	interfaces, err := GetEthernetInterfaces()
+	interfaces, err := utils.GetEthernetInterfaces()
 	if err != nil {
 		logger.Error("Failed to get Ethernet interfaces: %v", err)
 		uiutil.ShowError(app, pages, "Error getting interfaces: "+err.Error(), mainView, nil)
