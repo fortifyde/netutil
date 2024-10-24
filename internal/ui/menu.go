@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/fortifyde/netutil/internal/functions"
+	"github.com/fortifyde/netutil/internal/functions/configuration"
 	"github.com/fortifyde/netutil/internal/logger"
 	"github.com/fortifyde/netutil/internal/pkg"
 	"github.com/fortifyde/netutil/internal/uiutil"
@@ -80,7 +81,7 @@ func RunApp() error {
 					case "Check and toggle interfaces":
 						functions.ToggleEthernetInterfaces(app, pages, toolbox)
 					case "Edit Working Directory":
-						if err := functions.EditWorkingDirectory(app, pages, toolbox); err != nil {
+						if err := configuration.EditWorkingDirectory(app, pages, toolbox); err != nil {
 							uiutil.ShowError(app, pages, fmt.Sprintf("Error: %s", err), toolbox, nil)
 						}
 					case "Save Network Config":

@@ -11,12 +11,14 @@ import (
 
 var IsFloatingBoxActive bool
 
-// CloseModal gracefully closes the modal window.
-func CloseModal(app *tview.Application, pages *tview.Pages, mainView tview.Primitive) {
+// CloseModal gracefully closes the notification modal window.
+func CloseModalNotification(app *tview.Application, pages *tview.Pages, mainView tview.Primitive) {
 	IsFloatingBoxActive = false
 	pages.RemovePage("modal")
 	if toolbox, ok := mainView.(*tview.List); ok {
 		app.SetFocus(toolbox)
+	} else if mainView != nil {
+		app.SetFocus(mainView)
 	}
 }
 
@@ -26,7 +28,7 @@ func ShowMessage(app *tview.Application, pages *tview.Pages, message string, mai
 		SetText(message).
 		AddButtons([]string{"OK"}).
 		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
-			CloseModal(app, pages, mainView)
+			CloseModalNotification(app, pages, mainView)
 		})
 
 	IsFloatingBoxActive = true
@@ -34,13 +36,14 @@ func ShowMessage(app *tview.Application, pages *tview.Pages, message string, mai
 	app.SetFocus(modal)
 }
 
+// ShowError displays an error modal with an optional callback.
 func ShowError(app *tview.Application, pages *tview.Pages, message string, mainView tview.Primitive, callback func()) chan struct{} {
 	done := make(chan struct{})
 	modal := tview.NewModal().
 		SetText("[red]Error:[-] " + message).
 		AddButtons([]string{"OK"}).
 		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
-			CloseModal(app, pages, mainView)
+			CloseModalNotification(app, pages, mainView)
 			close(done)
 			if callback != nil {
 				go callback()
@@ -53,12 +56,13 @@ func ShowError(app *tview.Application, pages *tview.Pages, message string, mainV
 	return done
 }
 
+// ShowTimedMessage displays a modal message that closes after a specified duration.
 func ShowTimedMessage(app *tview.Application, pages *tview.Pages, message string, mainView tview.Primitive, duration time.Duration) {
 	modal := tview.NewModal().
 		SetText(message).
 		AddButtons([]string{"OK"}).
 		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
-			CloseModal(app, pages, mainView)
+			CloseModalNotification(app, pages, mainView)
 		})
 
 	IsFloatingBoxActive = true
@@ -69,12 +73,13 @@ func ShowTimedMessage(app *tview.Application, pages *tview.Pages, message string
 		time.Sleep(duration)
 		app.QueueUpdateDraw(func() {
 			if pages.HasPage("modal") {
-				CloseModal(app, pages, mainView)
+				CloseModalNotification(app, pages, mainView)
 			}
 		})
 	}()
 }
 
+// ShowList displays a selectable list modal.
 func ShowList(app *tview.Application, pages *tview.Pages, title string, items []string, selectedFunc func(int), mainView tview.Primitive) {
 	list := tview.NewList().
 		ShowSecondaryText(false).
@@ -86,7 +91,7 @@ func ShowList(app *tview.Application, pages *tview.Pages, title string, items []
 	for i, item := range items {
 		index := i
 		list.AddItem(item, "", 0, func() {
-			CloseModal(app, pages, mainView)
+			CloseModalNotification(app, pages, mainView)
 			selectedFunc(index)
 		})
 	}
@@ -114,7 +119,7 @@ func ShowList(app *tview.Application, pages *tview.Pages, title string, items []
 
 	list.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		if event.Key() == tcell.KeyEscape {
-			CloseModal(app, pages, mainView)
+			CloseModalNotification(app, pages, mainView)
 			return nil
 		}
 		return event
@@ -125,12 +130,13 @@ func ShowList(app *tview.Application, pages *tview.Pages, title string, items []
 	app.SetFocus(list)
 }
 
+// ShowConfirm displays a confirmation modal with Yes/No options.
 func ShowConfirm(app *tview.Application, pages *tview.Pages, message string, callback func(bool), mainView tview.Primitive) {
 	modal := tview.NewModal().
 		SetText(message).
 		AddButtons([]string{"Yes", "No"}).
 		SetDoneFunc(func(buttonIndex int, buttonLabel string) {
-			CloseModal(app, pages, mainView)
+			CloseModalNotification(app, pages, mainView)
 			callback(buttonLabel == "Yes")
 		})
 
@@ -362,7 +368,7 @@ func ShowAnalysisResults(app *tview.Application, pages *tview.Pages, results []p
 	table.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 		switch event.Rune() {
 		case 'q', 'Q':
-			CloseModal(app, pages, mainView)
+			CloseModalNotification(app, pages, mainView)
 			return nil
 		}
 		return event

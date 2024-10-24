@@ -46,14 +46,14 @@ func getConfigFilePath() string {
 		panic(fmt.Sprintf("Failed to get user home directory: %v", err))
 	}
 
-	configDir := filepath.Join(homeDir, ".config")
+	configDir := filepath.Join(homeDir, ".config", "netutil")
 	configFilePath := filepath.Join(configDir, configFileName)
 
-	// check if exists, create if not
+	// Check if the directory exists, create if not
 	if _, err := os.Stat(configDir); os.IsNotExist(err) {
-		err = os.Mkdir(configDir, os.ModePerm)
+		err = os.MkdirAll(configDir, os.ModePerm)
 		if err != nil {
-			panic(fmt.Sprintf("Failed to create .config directory: %v", err))
+			panic(fmt.Sprintf("Failed to create .config/netutil directory: %v", err))
 		}
 	}
 
@@ -64,7 +64,12 @@ func LoadConfig() (*Config, error) {
 	file, err := os.Open(getConfigFilePath())
 	if err != nil {
 		if os.IsNotExist(err) {
-			return &Config{}, nil
+			// Return default config if file doesn't exist
+			return &Config{
+				WorkingDirectory:  getDefaultWorkingDirectory(),
+				NetworkInterfaces: make(map[string]InterfaceState),
+				DefaultRoute:      "",
+			}, nil
 		}
 		return nil, err
 	}
@@ -96,7 +101,7 @@ func SaveConfig(config *Config) error {
 	}
 
 	logger.Info("Config saved successfully")
-	return encoder.Encode(config)
+	return nil
 }
 
 func EditWorkingDirectory(app *tview.Application, pages *tview.Pages, mainView tview.Primitive) error {
@@ -130,4 +135,20 @@ func EditWorkingDirectory(app *tview.Application, pages *tview.Pages, mainView t
 	logger.Info("Updated working directory to: %s", cfg.WorkingDirectory)
 
 	return nil
+}
+
+// getDefaultWorkingDirectory returns the default working directory path.
+func getDefaultWorkingDirectory() string {
+	// Check if we're running as root
+	if os.Geteuid() == 0 {
+		return "/root/"
+	}
+
+	// We're not root, use the regular user's home directory
+	homeDir, err := os.UserHomeDir()
+	if err != nil {
+		logger.Critical("Failed to get user home directory: %v", err)
+		os.Exit(1)
+	}
+	return homeDir
 }
