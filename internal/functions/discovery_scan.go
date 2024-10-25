@@ -279,7 +279,7 @@ func startScanning(app *tview.Application, pages *tview.Pages, ctx context.Conte
 	if err := scanners.PerformPingScan(ctx, ipRange, selectedInterface, vlanID, pingScanFile, func(format string, a ...interface{}) {
 		outputModal.AppendText(fmt.Sprintf(format, a...))
 	}); err != nil {
-		outputModal.AppendText(fmt.Sprintf("[red]Ping Scan failed: %v[-]\n", err))
+		//outputModal.AppendText(fmt.Sprintf("[red]Ping Scan failed: %v[-]\n", err))
 		logger.Error("Ping Scan failed: %v", err)
 	}
 

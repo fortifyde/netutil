@@ -76,6 +76,6 @@ func PerformWindowsOSDiscovery(ctx context.Context, pingScanFile, selectedInterf
 	// Since Nmap outputs to multiple files with -oA, we'll assume the XML file needs to be handled
 	// Adjust as necessary based on actual requirements
 
-	outputFunc("[blue]Windows OS Discovery completed and saved to %s[-]", windowsDiscoveryFile)
+	outputFunc("[blue]Windows OS Discovery completed and saved to %s[-]\n", windowsDiscoveryFile)
 	return nil
 }
