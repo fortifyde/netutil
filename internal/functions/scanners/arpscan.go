@@ -7,9 +7,16 @@ import (
 	"github.com/fortifyde/netutil/internal/logger"
 )
 
-// performARPSscan conducts an ARP scan over the specified IP range and outputs results to arpScanFile.
+// conducts an ARP scan over the specified IP range and outputs results to arpScanFile.
 func PerformARPscan(ipRange, selectedInterface, vlanID, arpScanFile string) error {
-	cmd := exec.Command("arp-scan", "--interface="+selectedInterface+"."+vlanID, ipRange)
+	var interfaceFlag string
+	if vlanID != "" {
+		interfaceFlag = "--interface=" + selectedInterface + "." + vlanID
+	} else {
+		interfaceFlag = "--interface=" + selectedInterface
+	}
+
+	cmd := exec.Command("arp-scan", interfaceFlag, ipRange)
 	output, err := cmd.Output()
 	if err != nil {
 		logger.Error("ARP Scan command failed: %v", err)

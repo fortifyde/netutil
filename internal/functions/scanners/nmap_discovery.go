@@ -10,7 +10,13 @@ import (
 )
 
 // conducts an enhanced Nmap discovery scan with service version detection
-func PerformNmapScan(hostfilePath, nmapOutputPath string) error {
+func PerformNmapScan(hostfilePath, selectedInterface, vlanID, nmapOutputPath string) error {
+	var interfaceFlag string
+	if vlanID != "" {
+		interfaceFlag = selectedInterface + "." + vlanID
+	} else {
+		interfaceFlag = selectedInterface
+	}
 	cmd := exec.Command("nmap",
 		"-PE", "-PP", "-PM", // ICMP probes
 		"-PS22,135-139,445,80,443,5060,2000,3389,53,88,389,636,3268,123", // TCP SYN probes
@@ -21,6 +27,7 @@ func PerformNmapScan(hostfilePath, nmapOutputPath string) error {
 		"-O",                        // OS detection
 		"--script=smb-os-discovery", // SMB OS discovery script
 		"-iL", hostfilePath,
+		"-e", interfaceFlag,
 		"-oA", strings.TrimSuffix(nmapOutputPath, filepath.Ext(nmapOutputPath)))
 
 	cmd.Stdout = os.Stdout

@@ -8,8 +8,14 @@ import (
 )
 
 // performs a quick Windows OS discovery and outputs results to windowsDiscoveryFile.
-func PerformWindowsOSDiscovery(pingScanFile, windowsDiscoveryFile string) error {
-	cmd := exec.Command("nmap", "-Pn", "-n", "-p445", "--script=smb-os-discovery", "-oG", windowsDiscoveryFile, "-iL", pingScanFile)
+func PerformWindowsOSDiscovery(pingScanFile, selectedInterface, vlanID, windowsDiscoveryFile string) error {
+	var interfaceFlag string
+	if vlanID != "" {
+		interfaceFlag = selectedInterface + "." + vlanID
+	} else {
+		interfaceFlag = selectedInterface
+	}
+	cmd := exec.Command("nmap", "-Pn", "-n", "-p445", "--script=smb-os-discovery", "-oG", windowsDiscoveryFile, "-iL", pingScanFile, "-e", interfaceFlag)
 	output, err := cmd.Output()
 	if err != nil {
 		logger.Error("Windows OS Discovery command failed: %v", err)

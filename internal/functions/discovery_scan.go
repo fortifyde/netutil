@@ -21,9 +21,9 @@ func StartDiscoveryScan(app *tview.Application, pages *tview.Pages, mainView tvi
 	var promptIPRange func()
 	var promptInterface func(ipRange string)
 	var promptDirName func(vlanID string)
-	performScans := func(ipRange, selectedInterface, vlanID, hostfilesDir, nmapDir string) {
+	performScans := func(ipRange, selectedInterface, vlanID, scanDir string) {
 		logger.Info("Starting ARP Scan on %s", ipRange)
-		arpScanFile := filepath.Join(hostfilesDir, "arp_scan.txt")
+		arpScanFile := filepath.Join(scanDir, "arp_scan.txt")
 		if err := scanners.PerformARPscan(ipRange, selectedInterface, vlanID, arpScanFile); err != nil {
 			logger.Error("ARP Scan failed: %v", err)
 			uiutil.ShowError(app, pages, "arpScanErrorModal",
@@ -33,7 +33,7 @@ func StartDiscoveryScan(app *tview.Application, pages *tview.Pages, mainView tvi
 		}
 
 		logger.Info("Starting Ping Scan on %s", ipRange)
-		pingScanFile := filepath.Join(hostfilesDir, "ping_scan.txt")
+		pingScanFile := filepath.Join(scanDir, "ping_scan.txt")
 		if err := scanners.PerformPingScan(ipRange, selectedInterface, vlanID, pingScanFile); err != nil {
 			logger.Error("Ping Scan failed: %v", err)
 			uiutil.ShowError(app, pages, "pingScanErrorModal",
@@ -43,7 +43,7 @@ func StartDiscoveryScan(app *tview.Application, pages *tview.Pages, mainView tvi
 		}
 
 		logger.Info("Starting DNS Reverse Lookup on %s", pingScanFile)
-		dnsLookupFile := filepath.Join(hostfilesDir, "dns_reverse_lookup.txt")
+		dnsLookupFile := filepath.Join(scanDir, "dns_reverse_lookup.txt")
 		if err := scanners.PerformDNSReverseLookup(pingScanFile, dnsLookupFile); err != nil {
 			logger.Error("DNS Reverse Lookup failed: %v", err)
 			uiutil.ShowError(app, pages, "dnsReverseLookupErrorModal",
@@ -53,8 +53,8 @@ func StartDiscoveryScan(app *tview.Application, pages *tview.Pages, mainView tvi
 		}
 
 		logger.Info("Starting Windows OS Quick Discovery")
-		windowsDiscoveryFile := filepath.Join(hostfilesDir, "windows_os_discovery.txt")
-		if err := scanners.PerformWindowsOSDiscovery(pingScanFile, windowsDiscoveryFile); err != nil {
+		windowsDiscoveryFile := filepath.Join(scanDir, "windows_os_discovery.txt")
+		if err := scanners.PerformWindowsOSDiscovery(pingScanFile, selectedInterface, vlanID, windowsDiscoveryFile); err != nil {
 			logger.Error("Windows OS Discovery failed: %v", err)
 			uiutil.ShowError(app, pages, "windowsOSDiscoveryErrorModal",
 				fmt.Sprintf("Windows OS Discovery failed: %v", err),
@@ -63,7 +63,7 @@ func StartDiscoveryScan(app *tview.Application, pages *tview.Pages, mainView tvi
 		}
 
 		logger.Info("Creating hostfile")
-		hostfilePath := filepath.Join(hostfilesDir, "hostfile.txt")
+		hostfilePath := filepath.Join(scanDir, "hostfile.txt")
 		if err := utils.CreateHostfile([]string{arpScanFile, pingScanFile, dnsLookupFile, windowsDiscoveryFile}, hostfilePath); err != nil {
 			logger.Error("Failed to create hostfile: %v", err)
 			criticalError = fmt.Errorf("failed to create hostfile: %v", err)
@@ -71,15 +71,8 @@ func StartDiscoveryScan(app *tview.Application, pages *tview.Pages, mainView tvi
 		}
 
 		logger.Info("Starting Nmap Discovery Scan")
-		nmapOutputDir := nmapDir
-		if err := utils.EnsureDir(nmapOutputDir); err != nil {
-			logger.Error("Failed to ensure Nmap directory exists: %v", err)
-			criticalError = fmt.Errorf("failed to ensure Nmap directory exists: %v", err)
-			return
-		}
-
-		nmapScanFile := filepath.Join(nmapOutputDir, "nmap_discovery_scan.xml")
-		if err := scanners.PerformNmapScan(hostfilePath, nmapScanFile); err != nil {
+		nmapScanFile := filepath.Join(scanDir, "nmap_discovery_scan.xml")
+		if err := scanners.PerformNmapScan(hostfilePath, selectedInterface, vlanID, nmapScanFile); err != nil {
 			logger.Error("Nmap Discovery Scan failed: %v", err)
 			uiutil.ShowError(app, pages, "nmapDiscoveryScanErrorModal",
 				fmt.Sprintf("Nmap Discovery Scan failed: %v", err),
@@ -113,9 +106,9 @@ func StartDiscoveryScan(app *tview.Application, pages *tview.Pages, mainView tvi
 
 			workingDir := utils.GetWorkingDirectory()
 			hostfilesDir := filepath.Join(workingDir, "#Hostfiles", dirName)
-			nmapDir := filepath.Join(workingDir, "Nmap", dirName)
+			scanDir := filepath.Join(hostfilesDir, "scans")
 
-			dirs := []string{hostfilesDir, nmapDir}
+			dirs := []string{hostfilesDir, scanDir}
 			for _, dir := range dirs {
 				if err := utils.EnsureDir(dir); err != nil {
 					logger.Error("Failed to create directory %s: %v", dir, err)
@@ -123,9 +116,9 @@ func StartDiscoveryScan(app *tview.Application, pages *tview.Pages, mainView tvi
 					return
 				}
 			}
-			logger.Info("Created directories: %s, %s", hostfilesDir, nmapDir)
+			logger.Info("Created directories: %s, %s", hostfilesDir, scanDir)
 
-			performScans(ipRange, selectedInterface, vlanID, hostfilesDir, nmapDir)
+			performScans(ipRange, selectedInterface, vlanID, scanDir)
 		}
 
 		promptDirName = func(vlanID string) {

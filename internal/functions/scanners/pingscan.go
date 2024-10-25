@@ -9,11 +9,17 @@ import (
 
 // conducts an asynchronous ping scan using fping and outputs results to pingScanFile.
 func PerformPingScan(ipRange, selectedInterface, vlanID, pingScanFile string) error {
-	cmd := exec.Command("fping", "-a", "-g", ipRange, "-I", selectedInterface+"."+vlanID, "-q")
+	var interfaceFlag string
+	if vlanID != "" {
+		interfaceFlag = selectedInterface + "." + vlanID
+	} else {
+		interfaceFlag = selectedInterface
+	}
+
+	cmd := exec.Command("fping", "-a", "-g", ipRange, "-I", interfaceFlag, "-q")
 	output, err := cmd.Output()
 	if err != nil {
-		logger.Error("Ping Scan command failed: %v", err)
-		return err
+		logger.Error("Ping Scan problem: %v", err)
 	}
 
 	if err := os.WriteFile(pingScanFile, output, 0644); err != nil {
