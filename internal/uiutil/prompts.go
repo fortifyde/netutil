@@ -72,6 +72,7 @@ func PromptInput(app *tview.Application, pages *tview.Pages, modalName, title, l
 			}).
 			AddButton("Cancel", func() {
 				callback("", fmt.Errorf("input canceled"))
+				logger.Info("User canceled input")
 				CloseModalNotification(app, pages, modalName, mainView)
 				done()
 			})
@@ -111,7 +112,8 @@ func PromptConfirmation(app *tview.Application, pages *tview.Pages, modalName, t
 				if buttonLabel == "Yes" {
 					callback(true, nil)
 				} else {
-					callback(false, fmt.Errorf("user declined"))
+					logger.Info("User declined confirmation")
+					callback(false, nil)
 				}
 				CloseConfirmModal(app, pages, modalName, mainView)
 				done()

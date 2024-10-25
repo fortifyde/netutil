@@ -34,14 +34,7 @@ func StartDiscoveryScan(app *tview.Application, pages *tview.Pages, mainView tvi
 	// Callback after Directory Name is inputted
 	dirNameCallback = func(input string, err error) {
 		if err != nil {
-			uiutil.ShowError(app, pages, "dirNameErrorModal",
-				"Directory name cannot be empty. Please enter a valid name.",
-				mainView,
-				func() {
-					uiutil.PromptInput(app, pages, "dirNameInputModal", "Discovery Scan",
-						"Enter directory name for hostfiles:", mainView,
-						dirNameCallback, "vlan"+vlanID)
-				})
+			cancel()
 			return
 		}
 
