@@ -1,11 +1,14 @@
 # Basic System Configuration, Network Discovery, and Enumeration
 This Go program acts as a helper to simplify common tasks when dealing with little known networks in Penetration Testing and Vulnerability Assessment settings. Its intuitive text-based user interface provides easy access to a variety of system and network management functions.
 
+![](https://github.com/fortifyde/netutil/blob/master/demo.gif)
+
 ## Prerequisites
 ### Required Software
 Install the Go programming language from [https://go.dev/doc/install](https://go.dev/doc/install) and use your preferred package manager to install the following:
 - Wireshark & tshark (comes with Wireshark as standard on most Linux distributions)
 - Zenity
+- nmap
 - TBD
 ```bash
 sudo apt-get install wireshark zenity
@@ -45,18 +48,18 @@ Start network capturing using Wireshark and perform analysis with tshark. Serves
 
 # Getting Started
 
-1. Installation
+### 1. Installation
 ```bash
 # Install required dependencies
 sudo apt-get update
-sudo apt-get install wireshark zenity
+sudo apt-get install wireshark zenity nmap
 
 # Clone and build NetUtil
 git clone https://github.com/fortifyde/netutil.git
 cd netutil
 go build
 ```
-2. Run Application
+### 2. Run Application
 ``` bash
 sudo ./netutil
 ```
