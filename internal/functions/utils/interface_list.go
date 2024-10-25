@@ -8,9 +8,7 @@ import (
 	"strings"
 )
 
-// retrieve all ethernet interfaces
-// filter out wireless interfaces and subinterfaces
-// separate function to retrieve subinterfaces of a given interface
+// GetEthernetInterfaces retrieves all wired Ethernet interfaces, excluding wireless and subinterfaces.
 func GetEthernetInterfaces() ([]net.Interface, error) {
 	allInterfaces, err := net.Interfaces()
 	if err != nil {
@@ -28,6 +26,7 @@ func GetEthernetInterfaces() ([]net.Interface, error) {
 	return ethernetInterfaces, nil
 }
 
+// isWiredEthernetInterface checks if the interface name corresponds to a wired Ethernet interface.
 func isWiredEthernetInterface(name string) bool {
 	wiredPrefixes := []string{
 		"eth", "en", "em", "eno", "enp", "ens", "enx",
@@ -42,11 +41,25 @@ func isWiredEthernetInterface(name string) bool {
 	return false
 }
 
+// isSubinterface determines if the given interface name is a subinterface.
 func isSubinterface(name string) bool {
 	re := regexp.MustCompile(`\.\d+(@.*)?$`)
 	return re.MatchString(name)
 }
 
+// IsValidInterface validates whether the provided interface name exists and is a valid Ethernet interface.
+func IsValidInterface(ifaceName string) bool {
+	// Check if the interface exists
+	iface, err := net.InterfaceByName(ifaceName)
+	if err != nil {
+		return false
+	}
+
+	// Further validation: ensure it's a wired Ethernet interface
+	return isWiredEthernetInterface(iface.Name) && !isSubinterface(iface.Name)
+}
+
+// GetSubinterfaces retrieves all subinterfaces for a given parent interface.
 func GetSubinterfaces(ifaceName string) ([]string, error) {
 	cmd := exec.Command("ip", "-o", "link", "show")
 	output, err := cmd.Output()
@@ -71,6 +84,7 @@ func GetSubinterfaces(ifaceName string) ([]string, error) {
 	return subinterfaces, nil
 }
 
+// isSubinterfaceOf checks if a subinterface belongs to the specified parent interface.
 func isSubinterfaceOf(subName, parentName string) bool {
 	pattern := fmt.Sprintf(`^%s\.\d+(@%s)?$`, regexp.QuoteMeta(parentName), regexp.QuoteMeta(parentName))
 	match, _ := regexp.MatchString(pattern, subName)

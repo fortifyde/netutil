@@ -2,6 +2,7 @@ package scanners
 
 import (
 	"bufio"
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
@@ -10,7 +11,7 @@ import (
 	"github.com/fortifyde/netutil/internal/logger"
 )
 
-func PerformDNSReverseLookup(hostfile, dnsLookupFile string) error {
+func PerformDNSReverseLookup(ctx context.Context, hostfile, dnsLookupFile string, outputFunc func(format string, a ...interface{})) error {
 	file, err := os.Open(hostfile)
 	if err != nil {
 		logger.Error("Failed to open hostfile for DNS lookup: %v", err)
@@ -34,7 +35,7 @@ func PerformDNSReverseLookup(hostfile, dnsLookupFile string) error {
 
 	var result strings.Builder
 	for _, ip := range ips {
-		cmd := exec.Command("dig", "-x", ip, "+short")
+		cmd := exec.CommandContext(ctx, "dig", "-x", ip, "+short")
 		output, err := cmd.Output()
 		if err != nil {
 			logger.Warning("DNS lookup failed for %s: %v", ip, err)

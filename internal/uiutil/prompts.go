@@ -2,10 +2,12 @@ package uiutil
 
 import (
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/fortifyde/netutil/internal/logger"
 	"github.com/rivo/tview"
+	"golang.org/x/term"
 )
 
 // gracefully closes the Input Prompt Modal window
@@ -31,9 +33,20 @@ func CloseConfirmModal(app *tview.Application, pages *tview.Pages, modalName str
 // displays a modal to get input from the user
 func PromptInput(app *tview.Application, pages *tview.Pages, modalName, title, label string, mainView tview.Primitive, callback func(string, error), prefill ...string) {
 	modalManager.Enqueue(func(done func()) {
+		modalName = "input_" + modalName
+		// Get terminal dimensions
+		width, height, err := term.GetSize(int(os.Stdout.Fd()))
+		if err != nil {
+			// Fallback to reasonable defaults if we can't get terminal size
+			width, height = 100, 30
+		}
+
+		// Calculate modal size (70% width)
+		modalWidth := int(float64(width) * 0.7)
+
 		input := tview.NewInputField().
 			SetLabel(label).
-			SetFieldWidth(40)
+			SetFieldWidth(modalWidth - len(label) - 4) // Subtract label length and some padding
 
 		if len(prefill) > 0 {
 			input.SetText(prefill[0])
@@ -63,12 +76,22 @@ func PromptInput(app *tview.Application, pages *tview.Pages, modalName, title, l
 				done()
 			})
 
+		// Center align the buttons
+		form.SetButtonsAlign(tview.AlignCenter)
 		form.SetBorder(true).SetTitle(title).SetTitleAlign(tview.AlignCenter)
 
+		// Calculate position for centering
+		modalX := (width - modalWidth) / 2
+		modalY := (height - 7) / 2 // 7 is approximate height of the form
+
 		flex := tview.NewFlex().SetDirection(tview.FlexRow).
-			AddItem(nil, 0, 1, false).
-			AddItem(form, 8, 1, true).
-			AddItem(nil, 0, 1, false)
+			AddItem(nil, modalY, 1, false).
+			AddItem(tview.NewFlex().SetDirection(tview.FlexColumn).
+				AddItem(nil, modalX, 1, false).
+				AddItem(form, modalWidth, 1, true).
+				AddItem(nil, modalX, 1, false),
+				7, 1, true).
+			AddItem(nil, modalY, 1, false)
 
 		pages.AddPage(modalName, flex, true, true)
 
@@ -80,6 +103,7 @@ func PromptInput(app *tview.Application, pages *tview.Pages, modalName, title, l
 // displays a confirmation modal to the user
 func PromptConfirmation(app *tview.Application, pages *tview.Pages, modalName, title, message string, callback func(bool, error), mainView tview.Primitive) {
 	modalManager.Enqueue(func(done func()) {
+		modalName = "confirm_" + modalName
 		modal := tview.NewModal().
 			SetText(fmt.Sprintf("[%s] %s", title, message)).
 			AddButtons([]string{"Yes", "No"}).

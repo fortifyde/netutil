@@ -1,7 +1,9 @@
 package scanners
 
 import (
-	"os"
+	"bufio"
+	"context"
+	"fmt"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -9,15 +11,17 @@ import (
 	"github.com/fortifyde/netutil/internal/logger"
 )
 
-// conducts an enhanced Nmap discovery scan with service version detection
-func PerformNmapScan(hostfilePath, selectedInterface, vlanID, nmapOutputPath string) error {
+// PerformNmapScan conducts an enhanced Nmap discovery scan with service version detection.
+// It streams command outputs to the provided outputFunc.
+func PerformNmapScan(ctx context.Context, hostfilePath, selectedInterface, vlanID, nmapOutputPath string, outputFunc func(format string, a ...interface{})) error {
 	var interfaceFlag string
 	if vlanID != "" {
 		interfaceFlag = selectedInterface + "." + vlanID
 	} else {
 		interfaceFlag = selectedInterface
 	}
-	cmd := exec.Command("nmap",
+
+	cmd := exec.CommandContext(ctx, "nmap",
 		"-PE", "-PP", "-PM", // ICMP probes
 		"-PS22,135-139,445,80,443,5060,2000,3389,53,88,389,636,3268,123", // TCP SYN probes
 		"-PU53,161",         // UDP probes
@@ -28,16 +32,62 @@ func PerformNmapScan(hostfilePath, selectedInterface, vlanID, nmapOutputPath str
 		"--script=smb-os-discovery", // SMB OS discovery script
 		"-iL", hostfilePath,
 		"-e", interfaceFlag,
-		"-oA", strings.TrimSuffix(nmapOutputPath, filepath.Ext(nmapOutputPath)))
+		"-oA", strings.TrimSuffix(nmapOutputPath, filepath.Ext(nmapOutputPath)),
+	)
+	stdoutDone := make(chan struct{})
+	stderrDone := make(chan struct{})
+	stdoutPipe, err := cmd.StdoutPipe()
+	if err != nil {
+		logger.Error("Failed to get stdout pipe for Nmap Scan: %v", err)
+		return err
+	}
 
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	stderrPipe, err := cmd.StderrPipe()
+	if err != nil {
+		logger.Error("Failed to get stderr pipe for Nmap Scan: %v", err)
+		return err
+	}
 
-	if err := cmd.Run(); err != nil {
+	if err := cmd.Start(); err != nil {
+		logger.Error("Failed to start Nmap Scan command: %v", err)
+		return err
+	}
+
+	// Stream stdout
+	go func() {
+		defer close(stdoutDone)
+		scanner := bufio.NewScanner(stdoutPipe)
+		for scanner.Scan() {
+			outputFunc("[green]Nmap Scan: %s[-]\n", scanner.Text())
+		}
+	}()
+
+	// Process stderr
+	go func() {
+		defer close(stderrDone)
+		scanner := bufio.NewScanner(stderrPipe)
+		for scanner.Scan() {
+			outputFunc("[red]Nmap Scan Error: %s[-]\n", scanner.Text())
+		}
+	}()
+
+	// Wait for both output streams to complete
+	<-stdoutDone
+	<-stderrDone
+
+	if err := cmd.Wait(); err != nil {
+		if ctx.Err() == context.Canceled {
+			outputFunc("[yellow]Nmap Scan canceled by user.[-]")
+			return fmt.Errorf("nmap Scan canceled")
+		}
 		logger.Error("Nmap Scan command failed: %v", err)
 		return err
 	}
 
-	logger.Info("Nmap Discovery Scan completed and saved to %s", nmapOutputPath)
+	// Write the output to the file
+	// Since Nmap outputs to multiple files with -oA, we'll assume the XML file needs to be handled
+	// Adjust as necessary based on actual requirements
+
+	outputFunc("[blue]Nmap Discovery Scan completed and saved to %s[-]", nmapOutputPath)
 	return nil
 }

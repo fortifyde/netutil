@@ -8,7 +8,7 @@ import (
 	"github.com/fortifyde/netutil/internal/logger"
 )
 
-// detectInterfaceForIPRange attempts to automatically detect the appropriate interface or VLAN for the given IP range.
+// DetectInterfaceForIPRange attempts to detect the network interface and VLAN ID based on the IP range.
 func DetectInterfaceForIPRange(ipRange string) (interfaceName string, vlanID string, err error) {
 	_, network, err := net.ParseCIDR(ipRange)
 	if err != nil {
@@ -35,9 +35,10 @@ func DetectInterfaceForIPRange(ipRange string) (interfaceName string, vlanID str
 				ip = v.IP
 			case *net.IPAddr:
 				ip = v.IP
+			default:
+				continue
 			}
 			if network.Contains(ip) {
-				// check if a VLAN subinterface
 				if strings.Contains(iface.Name, ".") {
 					parts := strings.Split(iface.Name, ".")
 					if len(parts) == 2 {
