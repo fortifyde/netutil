@@ -74,7 +74,7 @@ func StartWiresharkListening(app *tview.Application, pages *tview.Pages, mainVie
 	// filter active interfaces
 	var activeInterfaces []net.Interface
 	for _, iface := range interfaces {
-		status, _ := getInterfaceStatus(iface.Name)
+		status, _ := utils.GetInterfaceStatus(iface.Name)
 		if status == "up" {
 			activeInterfaces = append(activeInterfaces, iface)
 		}

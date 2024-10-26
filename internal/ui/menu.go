@@ -57,7 +57,13 @@ func RunApp(app *tview.Application, pages *tview.Pages, mainView tview.Primitive
 	categories := []string{"System Configuration", "Network Recon", "Category 3", "Category 4", "Category 5"}
 	categoryContents := make(map[string][]string)
 
-	categoryContents["System Configuration"] = []string{"Check and toggle interfaces", "Edit Working Directory", "Save Network Config", "Load Network Config"}
+	categoryContents["System Configuration"] = []string{
+		"Check and toggle interfaces",
+		"Configure Network Interfaces",
+		"Edit Working Directory",
+		"Save Network Config",
+		"Load Network Config",
+	}
 	categoryContents["Network Recon"] = []string{"Wireshark Listening", "Discovery Scan"} // Added "Discovery Scan"
 
 	for _, category := range categories {
@@ -76,7 +82,13 @@ func RunApp(app *tview.Application, pages *tview.Pages, mainView tview.Primitive
 				case "System Configuration":
 					switch function {
 					case "Check and toggle interfaces":
-						functions.ToggleEthernetInterfaces(app, pages, toolbox)
+						if err := functions.ToggleEthernetInterfaces(app, pages, toolbox); err != nil {
+							uiutil.ShowError(app, pages, "toggleInterfacesErrorModal", fmt.Sprintf("Error: %s", err), toolbox, nil)
+						}
+					case "Configure Network Interfaces":
+						if err := functions.ConfigureNetworkInterfaces(app, pages, toolbox); err != nil {
+							uiutil.ShowError(app, pages, "configureNetworkInterfacesErrorModal", fmt.Sprintf("Error: %s", err), toolbox, nil)
+						}
 					case "Edit Working Directory":
 						if err := configuration.EditWorkingDirectory(app, pages, toolbox); err != nil {
 							uiutil.ShowError(app, pages, "editWorkingDirectoryErrorModal", fmt.Sprintf("Error: %s", err), toolbox, nil)

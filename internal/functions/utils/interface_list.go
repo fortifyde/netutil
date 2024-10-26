@@ -6,6 +6,8 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+
+	"github.com/fortifyde/netutil/internal/logger"
 )
 
 // GetEthernetInterfaces retrieves all wired Ethernet interfaces, excluding wireless and subinterfaces.
@@ -89,4 +91,19 @@ func isSubinterfaceOf(subName, parentName string) bool {
 	pattern := fmt.Sprintf(`^%s\.\d+(@%s)?$`, regexp.QuoteMeta(parentName), regexp.QuoteMeta(parentName))
 	match, _ := regexp.MatchString(pattern, subName)
 	return match
+}
+
+func GetInterfaceStatus(name string) (string, error) {
+	logger.Info("Getting status for interface: %s", name)
+	cmd := exec.Command("ip", "link", "show", name)
+	output, err := cmd.Output()
+	if err != nil {
+		logger.Error("Failed to get status for interface %s: %v", name, err)
+		return "", err
+	}
+
+	if strings.Contains(string(output), "state UP") {
+		return "up", nil
+	}
+	return "down", nil
 }

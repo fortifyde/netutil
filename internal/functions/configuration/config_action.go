@@ -21,6 +21,7 @@ type Config struct {
 	WorkingDirectory  string                    `json:"working_directory"`
 	NetworkInterfaces map[string]InterfaceState `json:"network_interfaces"`
 	DefaultRoute      string                    `json:"default_route"`
+	MainInterface     string                    `json:"main_interface"`
 }
 
 type InterfaceState struct {
@@ -68,6 +69,7 @@ func LoadConfig() (*Config, error) {
 				WorkingDirectory:  getDefaultWorkingDirectory(),
 				NetworkInterfaces: make(map[string]InterfaceState),
 				DefaultRoute:      "",
+				MainInterface:     "",
 			}, nil
 		}
 		return nil, err

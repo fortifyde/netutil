@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net"
 	"os/exec"
-	"strings"
 
 	"github.com/fortifyde/netutil/internal/functions/utils"
 	"github.com/fortifyde/netutil/internal/logger"
@@ -17,19 +16,19 @@ import (
 // show a list of interfaces to choose from
 // toggling a single enabled interface will prompt for confirmation to disable it
 
-func ToggleEthernetInterfaces(app *tview.Application, pages *tview.Pages, mainView tview.Primitive) {
+func ToggleEthernetInterfaces(app *tview.Application, pages *tview.Pages, mainView tview.Primitive) error {
 	logger.Info("Toggling Ethernet interfaces")
 	interfaces, err := utils.GetEthernetInterfaces()
 	if err != nil {
 		logger.Error("Failed to get Ethernet interfaces: %v", err)
 		uiutil.ShowError(app, pages, "getEthernetInterfacesErrorModal", "Error getting interfaces: "+err.Error(), mainView, nil)
-		return
+		return err
 	}
 
 	if len(interfaces) == 0 {
 		logger.Info("No Ethernet interfaces found")
 		uiutil.ShowMessage(app, pages, "noEthernetInterfacesFoundModal", "No Ethernet interfaces found.", mainView)
-		return
+		return err
 	}
 
 	if len(interfaces) == 1 {
@@ -37,10 +36,11 @@ func ToggleEthernetInterfaces(app *tview.Application, pages *tview.Pages, mainVi
 	} else {
 		showInterfaceList(app, pages, interfaces, mainView)
 	}
+	return nil
 }
 
 func toggleSingleInterface(app *tview.Application, pages *tview.Pages, iface net.Interface, mainView tview.Primitive) {
-	currentStatus, err := getInterfaceStatus(iface.Name)
+	currentStatus, err := utils.GetInterfaceStatus(iface.Name)
 	if err != nil {
 		logger.Error("Failed to get status for interface %s: %v", iface.Name, err)
 		uiutil.ShowError(app, pages, "getInterfaceStatusErrorModal", fmt.Sprintf("Error: %v", err), mainView, nil)
@@ -69,23 +69,28 @@ func toggleSingleInterface(app *tview.Application, pages *tview.Pages, iface net
 }
 
 func showInterfaceList(app *tview.Application, pages *tview.Pages, interfaces []net.Interface, mainView tview.Primitive) {
+	logger.Info("Starting showInterfaceList")
 	items := make([]string, len(interfaces)+1)
 	for i, iface := range interfaces {
-		status, _ := getInterfaceStatus(iface.Name)
+		status, _ := utils.GetInterfaceStatus(iface.Name)
 		items[i] = fmt.Sprintf("%s (currently %s)", iface.Name, status)
+		logger.Info("Added interface to list: %s", items[i])
 	}
 	items[len(interfaces)] = "Cancel"
 
+	logger.Info("About to call ShowList, modal active: %v", uiutil.GetFloatingBoxActive())
 	uiutil.ShowList(app, pages, "selectEthernetInterfaceToToggleModal", "Select Ethernet Interface to Toggle", items, func(index int) {
+		logger.Info("List item selected: %d", index)
 		if index < len(interfaces) {
 			toggleInterface(app, pages, interfaces[index].Name, mainView)
 		}
 	}, mainView)
+	logger.Info("ShowList called")
 }
 
 func toggleInterface(app *tview.Application, pages *tview.Pages, name string, mainView tview.Primitive) {
 	logger.Info("Attempting to toggle interface: %s", name)
-	status, err := getInterfaceStatus(name)
+	status, err := utils.GetInterfaceStatus(name)
 	if err != nil {
 		logger.Error("Failed to get status for interface %s: %v", name, err)
 		uiutil.ShowError(app, pages, "getInterfaceStatusErrorModal", "Error getting interface status: "+err.Error(), mainView, nil)
@@ -106,21 +111,6 @@ func toggleInterface(app *tview.Application, pages *tview.Pages, name string, ma
 		logger.Info("Successfully set interface %s to %s", name, newStatus)
 		uiutil.ShowMessage(app, pages, "setInterfaceStatusSuccessModal", fmt.Sprintf("Interface %s has been set to %s.", name, newStatus), mainView)
 	}
-}
-
-func getInterfaceStatus(name string) (string, error) {
-	logger.Info("Getting status for interface: %s", name)
-	cmd := exec.Command("ip", "link", "show", name)
-	output, err := cmd.Output()
-	if err != nil {
-		logger.Error("Failed to get status for interface %s: %v", name, err)
-		return "", err
-	}
-
-	if strings.Contains(string(output), "state UP") {
-		return "up", nil
-	}
-	return "down", nil
 }
 
 func setInterfaceStatus(name, status string) error {

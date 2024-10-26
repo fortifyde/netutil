@@ -176,7 +176,7 @@ func SaveNetworkConfig(app *tview.Application, pages *tview.Pages, mainView tvie
 
 		// only save interfaces that are up
 		if linkState == "up" {
-			status, err := getInterfaceStatus(iface.Name)
+			status, err := utils.GetInterfaceStatus(iface.Name)
 			if err != nil {
 				return fmt.Errorf("failed to get status for interface %s: %v", iface.Name, err)
 			}
