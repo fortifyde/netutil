@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/fortifyde/netutil/internal/functions/scanners"
 	"github.com/fortifyde/netutil/internal/functions/utils"
@@ -55,10 +56,10 @@ func StartDiscoveryScan(app *tview.Application, pages *tview.Pages, mainView tvi
 
 		// Proceed to start scanning
 		wg.Add(1)
-		go startScanning(app, pages, ctx, cancel, dirName, ipRange, selectedInterface, vlanID, &wg, outputModal)
+		go startScanning(app, pages, ctx, cancel, dirName, ipRange, selectedInterface, vlanID, &wg, &outputModal, mainView)
 	}
 
-	// Callback after Interface and VLAN ID confirmation
+	// Callback after Interface Confirmation
 	interfaceConfirmationCallback = func(confirm bool, err error) {
 		if err != nil {
 			// Handle cancellation
@@ -232,105 +233,151 @@ func StartDiscoveryScan(app *tview.Application, pages *tview.Pages, mainView tvi
 // startScanning handles the scanning operations in a separate goroutine.
 func startScanning(app *tview.Application, pages *tview.Pages, ctx context.Context, cancel context.CancelFunc,
 	dirName, ipRange, selectedInterface, vlanID string,
-	wg *sync.WaitGroup, outputModal *uiutil.OutputModal) {
+	wg *sync.WaitGroup, outputModal **uiutil.OutputModal, mainView tview.Primitive) {
 
 	defer wg.Done()
 
 	// Initialize the Output Modal here
-	outputModal = uiutil.ShowOutputModal(app, pages, "outputModal", "[yellow]Discovery Scan Output[-]",
+	*outputModal = uiutil.ShowOutputModal(app, pages, "outputModal", "[yellow]Discovery Scan Output[-]",
 		func() {
-			// Handle cancellation
+			// Handle cancellation (Ctrl+C or 'q')
 			logger.Info("User requested cancellation")
-			cancel()
-			outputModal.AppendText("[yellow]Scan canceled by user.[-]\n")
-		})
+			cancel() // Signal cancellation to all goroutines
+		}, mainView) // mainView is our toolbox
+
+	// Create a channel to coordinate cleanup
+	cleanupDone := make(chan struct{})
+
+	// Start a goroutine to handle context cancellation
+	go func() {
+		select {
+		case <-ctx.Done():
+			// Context was cancelled (either by user or error)
+			(*outputModal).AppendText("[yellow]Scan canceled, cleaning up...[-]\n")
+			time.Sleep(2 * time.Second)
+			(*outputModal).SetScanning(false)
+			(*outputModal).CloseOutputModal("Scan Canceled")
+		case <-cleanupDone:
+			// Normal completion
+			(*outputModal).SetScanning(false)
+			logger.Info("All scans completed successfully")
+			(*outputModal).AppendText("[green]All scans completed successfully.[-]\n")
+			//(*outputModal).CloseOutputModal("Discovery Scan Completed Successfully")
+		}
+	}()
 
 	// Define the working directory paths
 	workingDir := utils.GetWorkingDirectory()
 	hostfilesDir := filepath.Join(workingDir, "#Hostfiles", dirName)
 	scanDir := filepath.Join(hostfilesDir, "scans")
 
+	// Create directories
 	dirs := []string{hostfilesDir, scanDir}
 	for _, dir := range dirs {
 		if err := utils.EnsureDir(dir); err != nil {
-			outputModal.AppendText(fmt.Sprintf("[red]Failed to create directory %s: %v[-]\n", dir, err))
-			logger.Error("Failed to create directory %s: %v", dir, err)
-			cancel()
+			app.QueueUpdateDraw(func() {
+				(*outputModal).AppendText(fmt.Sprintf("[red]Failed to create directory %s: %v[-]\n", dir, err))
+				logger.Error("Failed to create directory %s: %v", dir, err)
+				cancel()
+			})
 			return
 		}
 	}
-	outputModal.AppendText(fmt.Sprintf("[blue]Created directories: %s, %s[-]\n", hostfilesDir, scanDir))
+	(*outputModal).AppendText(fmt.Sprintf("[blue]Created directories: %s, %s[-]\n", hostfilesDir, scanDir))
 
-	// Perform ARP Scan
-	outputModal.AppendText("[blue]Starting ARP Scan[-]\n")
-	arpScanFile := filepath.Join(scanDir, "arp_scan.txt")
-	if err := scanners.PerformARPscan(ctx, ipRange, selectedInterface, vlanID, arpScanFile, func(format string, a ...interface{}) {
-		outputModal.AppendText(fmt.Sprintf(format, a...))
-	}); err != nil {
-		outputModal.AppendText(fmt.Sprintf("[red]ARP Scan failed: %v[-]\n", err))
-		logger.Error("ARP Scan failed: %v", err)
-		cancel()
-		return
+	// Define all scan steps
+	scanSteps := []struct {
+		name     string
+		execute  func() error
+		critical bool // If true, failure stops subsequent scans
+	}{
+		{
+			name: "ARP Scan",
+			execute: func() error {
+				return scanners.PerformARPscan(ctx, ipRange, selectedInterface, vlanID,
+					filepath.Join(scanDir, "arp_scan.txt"),
+					func(format string, a ...interface{}) {
+						(*outputModal).AppendText(fmt.Sprintf(format, a...))
+					})
+			},
+			critical: true,
+		},
+		{
+			name: "Ping Scan",
+			execute: func() error {
+				return scanners.PerformPingScan(ctx, ipRange, selectedInterface, vlanID,
+					filepath.Join(scanDir, "ping_scan.txt"),
+					func(format string, a ...interface{}) {
+						(*outputModal).AppendText(fmt.Sprintf(format, a...))
+					})
+			},
+			critical: false,
+		},
+		{
+			name: "DNS Reverse Lookup",
+			execute: func() error {
+				return scanners.PerformDNSReverseLookup(ctx, filepath.Join(scanDir, "ping_scan.txt"),
+					filepath.Join(scanDir, "dns_reverse_lookup.txt"),
+					func(format string, a ...interface{}) {
+						(*outputModal).AppendText(fmt.Sprintf(format, a...))
+					})
+			},
+			critical: false,
+		},
+		{
+			name: "Windows OS Discovery",
+			execute: func() error {
+				return scanners.PerformWindowsOSDiscovery(ctx, filepath.Join(scanDir, "ping_scan.txt"),
+					selectedInterface, vlanID,
+					filepath.Join(scanDir, "windows_os_discovery.txt"),
+					func(format string, a ...interface{}) {
+						(*outputModal).AppendText(fmt.Sprintf(format, a...))
+					})
+			},
+			critical: false,
+		},
+		{
+			name: "Create Hostfile",
+			execute: func() error {
+				return utils.CreateHostfile([]string{filepath.Join(scanDir, "ping_scan.txt")},
+					filepath.Join(scanDir, "hostfile.txt"))
+			},
+			critical: true,
+		},
+		{
+			name: "Nmap Discovery Scan",
+			execute: func() error {
+				return scanners.PerformNmapScan(ctx, filepath.Join(scanDir, "hostfile.txt"),
+					selectedInterface, vlanID,
+					filepath.Join(scanDir, "nmap_discovery_scan.xml"),
+					func(format string, a ...interface{}) {
+						(*outputModal).AppendText(fmt.Sprintf(format, a...))
+					})
+			},
+			critical: false,
+		},
 	}
 
-	// Perform Ping Scan
-	outputModal.AppendText("[blue]Starting Ping Scan[-]\n")
-	pingScanFile := filepath.Join(scanDir, "ping_scan.txt")
-	if err := scanners.PerformPingScan(ctx, ipRange, selectedInterface, vlanID, pingScanFile, func(format string, a ...interface{}) {
-		outputModal.AppendText(fmt.Sprintf(format, a...))
-	}); err != nil {
-		//outputModal.AppendText(fmt.Sprintf("[red]Ping Scan failed: %v[-]\n", err))
-		logger.Error("Ping Scan failed: %v", err)
-	}
+	// Perform all scans
+	for _, step := range scanSteps {
+		if step.critical {
+			if err := step.execute(); err != nil {
 
-	// Perform DNS Reverse Lookup
-	outputModal.AppendText("[blue]Starting DNS Reverse Lookup[-]\n")
-	dnsLookupFile := filepath.Join(scanDir, "dns_reverse_lookup.txt")
-	if err := scanners.PerformDNSReverseLookup(ctx, pingScanFile, dnsLookupFile, func(format string, a ...interface{}) {
-		outputModal.AppendText(fmt.Sprintf(format, a...))
-	}); err != nil {
-		outputModal.AppendText(fmt.Sprintf("[red]DNS Reverse Lookup failed: %v[-]\n", err))
-		logger.Error("DNS Reverse Lookup failed: %v", err)
-		cancel()
-		return
-	}
+				(*outputModal).AppendText(fmt.Sprintf("[red]%s failed: %v[-]\n", step.name, err))
+				logger.Error("%s failed: %v", step.name, err)
+				(*outputModal).SetScanning(false)
+				(*outputModal).CloseOutputModal(fmt.Sprintf("%s Failed", step.name))
 
-	// Perform Windows OS Discovery
-	outputModal.AppendText("[blue]Starting Windows OS Discovery[-]\n")
-	windowsDiscoveryFile := filepath.Join(scanDir, "windows_os_discovery.txt")
-	if err := scanners.PerformWindowsOSDiscovery(ctx, pingScanFile, selectedInterface, vlanID, windowsDiscoveryFile, func(format string, a ...interface{}) {
-		outputModal.AppendText(fmt.Sprintf(format, a...))
-	}); err != nil {
-		outputModal.AppendText(fmt.Sprintf("[red]Windows OS Discovery failed: %v[-]\n", err))
-		logger.Error("Windows OS Discovery failed: %v", err)
-		cancel()
-		return
-	}
-
-	// Create Hostfile
-	outputModal.AppendText("[blue]Creating hostfile[-]\n")
-	hostfilePath := filepath.Join(scanDir, "hostfile.txt")
-	if err := utils.CreateHostfile([]string{arpScanFile, pingScanFile, dnsLookupFile, windowsDiscoveryFile}, hostfilePath); err != nil {
-		outputModal.AppendText(fmt.Sprintf("[red]Failed to create hostfile: %v[-]\n", err))
-		logger.Error("Failed to create hostfile: %v", err)
-		cancel()
-		return
-	}
-	outputModal.AppendText(fmt.Sprintf("[blue]Hostfile created at %s[-]\n", hostfilePath))
-
-	// Perform Nmap Discovery Scan
-	outputModal.AppendText("[blue]Starting Nmap Discovery Scan[-]\n")
-	nmapScanFile := filepath.Join(scanDir, "nmap_discovery_scan.xml")
-	if err := scanners.PerformNmapScan(ctx, hostfilePath, selectedInterface, vlanID, nmapScanFile, func(format string, a ...interface{}) {
-		outputModal.AppendText(fmt.Sprintf(format, a...))
-	}); err != nil {
-		outputModal.AppendText(fmt.Sprintf("[red]Nmap Discovery Scan failed: %v[-]\n", err))
-		logger.Error("Nmap Discovery Scan failed: %v", err)
-		cancel()
-		return
+				return
+			}
+		} else {
+			if err := step.execute(); err != nil {
+				(*outputModal).AppendText(fmt.Sprintf("[yellow]%s failed: %v[-]\n", step.name, err))
+				logger.Error("%s failed: %v", step.name, err)
+			}
+		}
 	}
 
 	// All scans completed successfully
-	outputModal.AppendText("[green]All scans completed successfully.[-]\n")
-	outputModal.CloseOutputModal("Discovery Scan Completed Successfully.")
+	close(cleanupDone) // This will trigger the cleanup goroutine to close the modal
 }

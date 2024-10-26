@@ -8,7 +8,6 @@ import (
 )
 
 // defines the signature for modal functions
-// accepts a 'done' callback to signal when the modal has been closed
 type ModalFunc func(done func())
 
 // manages the display of modals in a queued manner
@@ -32,8 +31,12 @@ func NewModalManager(app *tview.Application, pages *tview.Pages, mainView tview.
 	}
 }
 
-// adds a new modal function to the queue
-// logs a fatal error if the ModalManager is not initialized
+// Getter for ModalManager
+func GetModalManager() *ModalManager {
+	return modalManager
+}
+
+// Enqueue adds a new modal function to the queue
 func (m *ModalManager) Enqueue(modal ModalFunc) {
 	if m == nil {
 		log.Fatal("ModalManager is not initialized. Please call InitializeModalManager before enqueuing modals.")
@@ -67,10 +70,12 @@ func (m *ModalManager) displayNext() {
 		log.Println("Displaying the next modal.")
 
 		done := make(chan struct{})
+		var onceClose sync.Once // Ensures done is closed only once
+
 		m.app.QueueUpdateDraw(func() {
 			nextModal(func() {
 				log.Println("Modal has been closed.")
-				close(done)
+				onceClose.Do(func() { close(done) })
 			})
 		})
 

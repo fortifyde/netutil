@@ -18,7 +18,7 @@ func PerformDNSReverseLookup(ctx context.Context, hostfile, dnsLookupFile string
 		return err
 	}
 	defer file.Close()
-
+	logger.Info("Starting DNS reverse lookup for %s", hostfile)
 	// Create/truncate the output file
 	outFile, err := os.Create(dnsLookupFile)
 	if err != nil {
@@ -68,6 +68,7 @@ func PerformDNSReverseLookup(ctx context.Context, hostfile, dnsLookupFile string
 		}
 	}
 
+	logger.Info("DNS Reverse Lookup completed and saved to %s", dnsLookupFile)
 	outputFunc("[blue]DNS Reverse Lookup completed and saved to %s[-]\n", dnsLookupFile)
 	return nil
 }

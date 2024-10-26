@@ -10,7 +10,7 @@ import (
 
 // displays the analysis results in a modal with structured columns and merged headers
 func ShowAnalysisResults(app *tview.Application, pages *tview.Pages, modalName string, results []pkg.AnalysisResult, mainView tview.Primitive) {
-	modalManager.Enqueue(func(done func()) {
+	modalFunc := func(done func()) {
 		table := tview.NewTable().
 			SetBorders(true).
 			SetBordersColor(pkg.NordAccent).
@@ -236,24 +236,12 @@ func ShowAnalysisResults(app *tview.Application, pages *tview.Pages, modalName s
 		pages.AddPage(modalName, flex, true, true)
 		app.SetFocus(table)
 		SetFloatingBoxActive(true)
+	}
 
-		done()
-	})
-}
-
-// displays the scan result in a modal
-func ShowScanResult(app *tview.Application, pages *tview.Pages, modalName, result string, mainView tview.Primitive) {
-	modalManager.Enqueue(func(done func()) {
-		modal := tview.NewModal().
-			SetText(result).
-			AddButtons([]string{"Close"}).
-			SetDoneFunc(func(buttonIndex int, buttonLabel string) {
-				CloseModalNotification(app, pages, modalName, mainView)
-				done()
-			})
-
-		pages.AddPage(modalName, modal, true, true)
-		app.SetFocus(modal)
-		SetFloatingBoxActive(true)
-	})
+	modalManager := GetModalManager()
+	if modalManager != nil {
+		modalManager.Enqueue(modalFunc)
+	} else {
+		panic("ModalManager is not initialized. Please initialize it before showing modals.")
+	}
 }

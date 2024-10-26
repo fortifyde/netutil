@@ -15,8 +15,10 @@ func SetupKeyboardControls(app *tview.Application, menu *tview.List, toolbox *tv
 		}
 
 		switch event.Key() {
-		case tcell.KeyCtrlC:
+		case tcell.KeyEscape:
 			app.Stop()
+			return nil
+		case tcell.KeyCtrlC:
 			return nil
 		case tcell.KeyLeft, tcell.KeyRight:
 			return handleHorizontalNavigation(app, menu, toolbox, event)

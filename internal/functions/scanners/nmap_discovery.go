@@ -34,6 +34,8 @@ func PerformNmapScan(ctx context.Context, hostfilePath, selectedInterface, vlanI
 		"-e", interfaceFlag,
 		"-oA", strings.TrimSuffix(nmapOutputPath, filepath.Ext(nmapOutputPath)),
 	)
+	logger.Info("Starting Nmap Discovery Scan with command: %s", cmd.String())
+
 	stdoutDone := make(chan struct{})
 	stderrDone := make(chan struct{})
 	stdoutPipe, err := cmd.StdoutPipe()
@@ -87,7 +89,7 @@ func PerformNmapScan(ctx context.Context, hostfilePath, selectedInterface, vlanI
 	// Write the output to the file
 	// Since Nmap outputs to multiple files with -oA, we'll assume the XML file needs to be handled
 	// Adjust as necessary based on actual requirements
-
+	logger.Info("Nmap Discovery Scan completed and saved to %s", nmapOutputPath)
 	outputFunc("[blue]Nmap Discovery Scan completed and saved to %s[-]\n", nmapOutputPath)
 	return nil
 }

@@ -81,9 +81,9 @@ func PerformPingScan(ctx context.Context, ipRange, selectedInterface, vlanID, pi
 			return fmt.Errorf("ping Scan canceled")
 		}
 		logger.Error("Ping Scan command failed: %v", err)
-		return err
+		return nil
 	}
-
+	logger.Info("Ping Scan completed and saved to %s", pingScanFile)
 	outputFunc("[blue]Ping Scan completed and saved to %s[-]", pingScanFile)
 	return nil
 }

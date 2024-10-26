@@ -21,7 +21,7 @@ func PerformARPscan(ctx context.Context, ipRange, selectedInterface, vlanID, arp
 	}
 
 	cmd := exec.CommandContext(ctx, "arp-scan", interfaceFlag, ipRange)
-
+	logger.Info("Running ARP Scan with command: %s", cmd.String())
 	// Create/truncate the output file
 	file, err := os.Create(arpScanFile)
 	if err != nil {
@@ -83,7 +83,7 @@ func PerformARPscan(ctx context.Context, ipRange, selectedInterface, vlanID, arp
 		logger.Error("ARP Scan command failed: %v", err)
 		return err
 	}
-
+	logger.Info("ARP Scan completed and saved to %s", arpScanFile)
 	outputFunc("[blue]ARP Scan completed and saved to %s[-]\n", arpScanFile)
 	return nil
 }
