@@ -48,11 +48,6 @@ Save the current network configuration settings for future use.
 #### Load Network Config
 Load and apply a previously saved network configuration.
 ## Network Recon
-Perform network reconnaissance
-#### Wireshark Listening
-Start network capturing using Wireshark and perform analysis with tshark. Serves to establish a baseline of network traffic and protocols in use, as well as identify potential areas of interest for further analysis.
-
-## Network Recon
 Listen stealthily for network traffic and perform initial discovery and enumeration.
 #### Wireshark Listening
 Short Network capture using Wireshark and perform analysis with tshark.
