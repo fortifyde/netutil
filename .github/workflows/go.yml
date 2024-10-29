@@ -53,7 +53,7 @@ jobs:
 
     - name: Build Release Binary
       run: |
-        GOOS=linux GOARCH=amd64 go build -o netutil-linux-amd64
+        GOOS=linux GOARCH=amd64 go build -o netutil-linux-amd64 cmd/netutil/main.go
 
     - name: Create Release
       uses: softprops/action-gh-release@v2
