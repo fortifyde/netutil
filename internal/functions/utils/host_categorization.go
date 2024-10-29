@@ -429,7 +429,7 @@ func parseNmapXML(xmlPath string) (map[string]HostInfo, error) {
 		for _, port := range host.Ports {
 			hostInfo.Ports = append(hostInfo.Ports, Port{
 				Protocol: port.Protocol,
-				PortID:   port.PortId,
+				PortID:   port.PortID,
 				State:    port.State.State,
 				Service: Service{
 					Name:      port.Service.Name,

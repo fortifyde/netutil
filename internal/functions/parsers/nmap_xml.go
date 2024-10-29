@@ -41,7 +41,7 @@ type HostName struct {
 
 type Port struct {
 	Protocol string      `xml:"protocol,attr"`
-	PortId   int         `xml:"portid,attr"`
+	PortID   int         `xml:"portid,attr"`
 	State    PortState   `xml:"state"`
 	Service  PortService `xml:"service"`
 }

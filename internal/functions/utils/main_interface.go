@@ -109,10 +109,10 @@ func ConfigureNetworkInterfaces(app *tview.Application, pages *tview.Pages, main
 				if err := SetMainInterface(availableInterfaces[index].Name); err != nil {
 					logger.Error("Failed to set main interface: %v", err)
 					uiutil.ShowError(app, pages, "setMainInterfaceErrorModal",
-						fmt.Sprintf("Failed to set main interface: %v", err), mainView, nil)
+						"Failed to set main interface: "+err.Error(), mainView, nil)
 					return
 				}
-				logger.Info("Main interface set to " + availableInterfaces[index].Name)
+				logger.Info("Main interface set to %s", availableInterfaces[index].Name)
 			}
 		},
 		mainView)
