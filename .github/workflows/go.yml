@@ -21,7 +21,7 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y nmap arp-scan
+        sudo apt-get install -y nmap arp-scan zenity wireshark
 
     - name: Build
       run: go build -v ./...
@@ -50,12 +50,10 @@ jobs:
     - name: Build Release Binary
       run: |
         GOOS=linux GOARCH=amd64 go build -o netutil-linux-amd64
-        GOOS=windows GOARCH=amd64 go build -o netutil-windows-amd64.exe
 
     - name: Create Release
       uses: softprops/action-gh-release@v2
       with:
         files: |
           netutil-linux-amd64
-          netutil-windows-amd64.exe
         generate_release_notes: true
