@@ -111,7 +111,12 @@ func configureVLANsManually(app *tview.Application, pages *tview.Pages, mainInte
 					mainView, nil)
 				return
 			}
-			utils.ConfigureVLANs(mainInterface, vlanIDs)
+			if err := utils.ConfigureVLANs(mainInterface, vlanIDs); err != nil {
+				uiutil.ShowError(app, pages, "configureVLANsErrorModal",
+					fmt.Sprintf("Failed to configure VLANs: %v", err),
+					mainView, nil)
+				return
+			}
 		},
 		"")
 }
@@ -136,7 +141,13 @@ func showVLANSelectionList(app *tview.Application, pages *tview.Pages, mainInter
 		vlanIDs,
 		func(selected []string) {
 			if len(selected) > 0 {
-				utils.ConfigureVLANs(mainInterface, selected)
+				if err := utils.ConfigureVLANs(mainInterface, selected); err != nil {
+					logger.Error("Failed to configure VLANs: %v", err)
+					uiutil.ShowError(app, pages, "configureVLANsErrorModal",
+						fmt.Sprintf("Failed to configure VLANs: %v", err),
+						mainView, nil)
+					return
+				}
 			}
 		},
 		mainView)

@@ -168,7 +168,10 @@ func ShowOutputModal(app *tview.Application, pages *tview.Pages, modalName, titl
 // AppendText safely appends text to the OutputModal's TextView.
 func (o *OutputModal) AppendText(text string) {
 	o.app.QueueUpdateDraw(func() {
-		o.textView.Write([]byte(text))
+		_, err := o.textView.Write([]byte(text))
+		if err != nil {
+			logger.Error("Failed to write to output modal: %v", err)
+		}
 	})
 }
 

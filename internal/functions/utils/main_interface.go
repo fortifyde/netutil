@@ -71,9 +71,9 @@ func ConfigureNetworkInterfaces(app *tview.Application, pages *tview.Pages, main
 	}
 
 	if len(availableInterfaces) == 0 {
-		msg := "No active ethernet interfaces found!"
-		logger.Error(msg)
-		uiutil.ShowError(app, pages, "noActiveInterfacesModal", msg, mainView, nil)
+		const errMsg = "No active ethernet interfaces found!"
+		logger.Error(errMsg)
+		uiutil.ShowError(app, pages, "noActiveInterfacesModal", errMsg, mainView, nil)
 		return errors.New("no active interfaces found")
 	}
 
@@ -129,8 +129,14 @@ func showCurrentConfig(app *tview.Application, pages *tview.Pages, mainView tvie
 		func(confirmed bool) {
 			if confirmed {
 				// Reset the main interface and recall the configuration function
-				SetMainInterface("")
-				ConfigureNetworkInterfaces(app, pages, mainView)
+				if err := SetMainInterface(""); err != nil {
+					logger.Error("Failed to reset main interface: %v", err)
+					return
+				}
+				if err := ConfigureNetworkInterfaces(app, pages, mainView); err != nil {
+					logger.Error("Failed to reconfigure network interfaces: %v", err)
+					return
+				}
 			}
 		},
 		mainView)

@@ -150,7 +150,9 @@ func StartWiresharkListening(app *tview.Application, pages *tview.Pages, mainVie
 	err = tsharkCmd.Start()
 	if err != nil {
 		logger.Error("Failed to start tshark: %v", err)
-		wiresharkCmd.Process.Kill()
+		if err := wiresharkCmd.Process.Kill(); err != nil {
+			logger.Error("Failed to kill wireshark process: %v", err)
+		}
 		app.QueueUpdateDraw(func() {
 			uiutil.ShowError(app, pages, "startTsharkErrorModal", "Failed to start tshark.", mainView, nil)
 		})

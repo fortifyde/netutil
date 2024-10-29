@@ -20,7 +20,9 @@ func ReadWriteConfig(app *tview.Application, primitive tview.Primitive) (*Config
 
 	if cfg.WorkingDirectory == "" {
 		logger.Info("No working directory set, prompting user to select one")
-		exec.Command("zenity", "--info", "--title=File Structure Configuration", "--text=Please select a base working directory.").Run()
+		if err := exec.Command("zenity", "--info", "--title=File Structure Configuration", "--text=Please select a base working directory.").Run(); err != nil {
+			logger.Error("Failed to show zenity prompt: %v", err)
+		}
 
 		cfg.WorkingDirectory, err = selectWorkingDirectory()
 		if err != nil {

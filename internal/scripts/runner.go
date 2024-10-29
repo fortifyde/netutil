@@ -23,7 +23,10 @@ func RunBashScript(scriptPath string, toolbox *tview.TextView) {
 		for {
 			n, err := stdout.Read(buf)
 			if n > 0 {
-				toolbox.Write(buf[:n])
+				_, err := toolbox.Write(buf[:n])
+				if err != nil {
+					log.Printf("Failed to write to toolbox: %v", err)
+				}
 			}
 			if err != nil {
 				break
