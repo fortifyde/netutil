@@ -16,14 +16,17 @@ import (
 func GetAllConfiguredInterfaces(mainInterface string) ([]string, error) {
 	interfaces := []string{mainInterface}
 
-	cfg, err := configuration.LoadConfig()
+	// Get all system interfaces
+	allInterfaces, err := GetSubinterfaces(mainInterface)
 	if err != nil {
-		return nil, fmt.Errorf("failed to load config: %v", err)
+		return nil, fmt.Errorf("failed to get network interfaces: %v", err)
 	}
 
-	if state, exists := cfg.NetworkInterfaces[mainInterface]; exists {
-		for _, sub := range state.Subinterfaces {
-			interfaces = append(interfaces, sub.Name)
+	// Find subinterfaces of the main interface
+	for _, iface := range allInterfaces {
+		// Check if this is a subinterface of our main interface
+		if strings.HasPrefix(iface, mainInterface+".") {
+			interfaces = append(interfaces, iface)
 		}
 	}
 
@@ -78,13 +81,13 @@ func ConfigureIPAddresses(interfaces []string, app *tview.Application, pages *tv
 				if err != nil {
 					logger.Error("Invalid IP address format for %s: %v", iface, err)
 					uiutil.ShowError(app, pages, "invalidIPFormatModal",
-						fmt.Sprintf("Invalid IP format. Please use CIDR notation (e.g., 192.168.1.1/24)"),
+						"Invalid IP format. Please use CIDR notation (e.g., 192.168.1.1/24)",
 						mainView, nil)
 					return
 				}
 
 				// Apply IP configuration
-				err = applyIPConfig(iface, ip.String(), ipNet.String())
+				err = applyIPConfig(iface, input)
 				if err != nil {
 					logger.Error("Failed to apply IP configuration for %s: %v", iface, err)
 					uiutil.ShowError(app, pages, "applyIPConfigErrorModal",
@@ -116,16 +119,18 @@ func ConfigureIPAddresses(interfaces []string, app *tview.Application, pages *tv
 }
 
 // applyIPConfig applies the IP configuration to the interface
-func applyIPConfig(iface, ip, subnet string) error {
+func applyIPConfig(iface, ip string) error {
 	// First, flush existing IP addresses
 	flushCmd := exec.Command("ip", "addr", "flush", "dev", iface)
 	if err := flushCmd.Run(); err != nil {
+		logger.Error("failed to flush IP addresses: %v", err)
 		return fmt.Errorf("failed to flush IP addresses: %v", err)
 	}
 
 	// Apply new IP address
-	addCmd := exec.Command("ip", "addr", "add", fmt.Sprintf("%s/%s", ip, subnet), "dev", iface)
+	addCmd := exec.Command("ip", "addr", "add", ip, "dev", iface)
 	if err := addCmd.Run(); err != nil {
+		logger.Error("failed to add IP address: %v", err)
 		return fmt.Errorf("failed to add IP address: %v", err)
 	}
 

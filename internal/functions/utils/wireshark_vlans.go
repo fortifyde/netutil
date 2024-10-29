@@ -12,7 +12,7 @@ import (
 	"github.com/fortifyde/netutil/internal/logger"
 )
 
-// GetWiresharkVLANs retrieves unique VLAN IDs from Wireshark capture files
+// retrieves unique VLAN IDs from Wireshark capture files
 func GetWiresharkVLANs() ([]string, error) {
 	cfg, err := configuration.LoadConfig()
 	if err != nil {

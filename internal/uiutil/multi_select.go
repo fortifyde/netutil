@@ -9,7 +9,7 @@ import (
 // ShowMultiSelect displays a list with multiple selection capability
 func ShowMultiSelect(app *tview.Application, pages *tview.Pages,
 	modalID, title string, items []string,
-	onConfirm func(selected []string), mainView tview.Primitive) {
+	onConfirm func([]string), mainView tview.Primitive) {
 
 	modalManager.Enqueue(func(done func()) {
 		selected := make(map[int]bool)
@@ -21,23 +21,16 @@ func ShowMultiSelect(app *tview.Application, pages *tview.Pages,
 			SetMainTextColor(pkg.NordFg)
 
 		// Add items to the list
-		for i, item := range items {
-			index := i // Capture for closure
-			list.AddItem(item, "", ' ', func() {
-				selected[index] = !selected[index]
-				if selected[index] {
-					list.SetItemText(index, "✓ "+item, "")
-				} else {
-					list.SetItemText(index, item, "")
-				}
-			})
+		for _, item := range items {
+			list.AddItem(item, "", 0, nil)
 		}
 
-		// Create buttons
+		// Create buttons flex container
 		buttons := tview.NewFlex().
 			SetDirection(tview.FlexColumn)
 
-		confirmButton := tview.NewButton("Confirm").
+		// Create and configure buttons
+		submitButton := tview.NewButton("Submit").
 			SetSelectedFunc(func() {
 				var selectedItems []string
 				for i := range items {
@@ -64,7 +57,7 @@ func ShowMultiSelect(app *tview.Application, pages *tview.Pages,
 				done()
 			})
 
-		buttons.AddItem(confirmButton, 0, 1, false).
+		buttons.AddItem(submitButton, 0, 1, false).
 			AddItem(tview.NewBox(), 1, 0, false).
 			AddItem(selectAllButton, 0, 1, false).
 			AddItem(tview.NewBox(), 1, 0, false).
@@ -95,7 +88,7 @@ func ShowMultiSelect(app *tview.Application, pages *tview.Pages,
 				0, 1, true).
 			AddItem(nil, 0, 1, false)
 
-		// Handle keyboard input
+		// Modify input capture to handle only space key for selection
 		list.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 			switch event.Key() {
 			case tcell.KeyEscape:
@@ -104,8 +97,8 @@ func ShowMultiSelect(app *tview.Application, pages *tview.Pages,
 				return nil
 			case tcell.KeyTab:
 				if app.GetFocus() == list {
-					app.SetFocus(confirmButton)
-				} else if app.GetFocus() == confirmButton {
+					app.SetFocus(submitButton)
+				} else if app.GetFocus() == submitButton {
 					app.SetFocus(selectAllButton)
 				} else if app.GetFocus() == selectAllButton {
 					app.SetFocus(cancelButton)
@@ -114,7 +107,7 @@ func ShowMultiSelect(app *tview.Application, pages *tview.Pages,
 				}
 				return nil
 			case tcell.KeyRune:
-				if event.Rune() == ' ' && app.GetFocus() == list {
+				if event.Rune() == ' ' {
 					currentItem := list.GetCurrentItem()
 					selected[currentItem] = !selected[currentItem]
 					if selected[currentItem] {
