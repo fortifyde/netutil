@@ -24,12 +24,16 @@ func PerformNmapScan(ctx context.Context, hostfilePath, selectedInterface, vlanI
 	cmd := exec.CommandContext(ctx, "nmap",
 		"-PE", "-PP", "-PM", // ICMP probes
 		"-PS22,135-139,445,80,443,5060,2000,3389,53,88,389,636,3268,123", // TCP SYN probes
-		"-PU53,161",         // UDP probes
-		"-R",                // Reverse-resolve IP addresses
+		"-PU53,161", // UDP probes
+		//"-R",                // Reverse-resolve IP addresses
+		"-n",
 		"--top-ports", "10", // Scan most common ports
 		"-sV",                       // Service version detection
 		"-O",                        // OS detection
 		"--script=smb-os-discovery", // SMB OS discovery script
+		"--min-hostgroup", " 64",
+		"--min-parallelism", "32",
+		"--host-timeout", "10m",
 		"-iL", hostfilePath,
 		"-e", interfaceFlag,
 		"-oA", strings.TrimSuffix(nmapOutputPath, filepath.Ext(nmapOutputPath)),

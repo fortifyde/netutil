@@ -352,21 +352,35 @@ func startScanning(app *tview.Application, pages *tview.Pages, ctx context.Conte
 			name: "Create Hostfile",
 			execute: func() error {
 				return utils.CreateHostfile([]string{filepath.Join(scanDir, "ping_scan.txt")},
-					filepath.Join(scanDir, "hostfile.txt"))
+					filepath.Join(hostfilesDir, "hosts_found_up.txt"))
 			},
 			critical: true,
 		},
 		{
 			name: "Nmap Discovery Scan",
 			execute: func() error {
-				return scanners.PerformNmapScan(ctx, filepath.Join(scanDir, "hostfile.txt"),
+				return scanners.PerformNmapScan(ctx, filepath.Join(hostfilesDir, "hosts_found_up.txt"),
 					selectedInterface, vlanID,
 					filepath.Join(scanDir, "nmap_discovery_scan.xml"),
 					func(format string, a ...interface{}) {
 						(*outputModal).AppendText(fmt.Sprintf(format, a...))
 					})
 			},
-			critical: false,
+			critical: true,
+		},
+		{
+			name: "Categorize Scan Results",
+			execute: func() error {
+				return utils.PerformCategorization(
+					hostfilesDir,
+					filepath.Join(scanDir, "arp_scan.txt"),
+					filepath.Join(scanDir, "ping_scan.txt"),
+					filepath.Join(scanDir, "dns_reverse_lookup.txt"),
+					filepath.Join(scanDir, "windows_os_discovery.txt"),
+					filepath.Join(scanDir, "nmap_discovery_scan.xml"),
+				)
+			},
+			critical: false, // Set to true if categorization is critical
 		},
 	}
 

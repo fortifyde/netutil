@@ -40,12 +40,13 @@ func GetWorkingDirectory() string {
 	return cfg.WorkingDirectory
 }
 
-// extractIPFromLine extracts the IP address from a given line.
+// extractIPFromLine extracts the first valid IPv4 address from a given line.
 func ExtractIPFromLine(line string) string {
 	fields := strings.Fields(line)
 	for _, field := range fields {
-		if net.ParseIP(field) != nil {
-			return field
+		ip := net.ParseIP(field)
+		if ip != nil && ip.To4() != nil {
+			return ip.String()
 		}
 	}
 	return ""
