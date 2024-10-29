@@ -34,14 +34,16 @@ jobs:
       with:
         version: latest
         args: --timeout=5m
-        skip-cache: true      # Skip cache to avoid file exists errors
-        skip-pkg-cache: true  # Skip package cache
-        skip-build-cache: true # Skip build cache
+        skip-cache: true
+        skip-pkg-cache: true
+        skip-build-cache: true
 
   release:
     needs: build
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
     
     steps:
     - uses: actions/checkout@v4
