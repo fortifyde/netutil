@@ -9,4 +9,3 @@ linters:
 
 run:
   deadline: 5m
-

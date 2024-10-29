@@ -33,6 +33,10 @@ jobs:
       uses: golangci/golangci-lint-action@v4
       with:
         version: latest
+        args: --timeout=5m
+        skip-cache: true      # Skip cache to avoid file exists errors
+        skip-pkg-cache: true  # Skip package cache
+        skip-build-cache: true # Skip build cache
 
   release:
     needs: build
