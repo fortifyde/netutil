@@ -12,7 +12,7 @@ This Go program acts as a helper to simplify common tasks when dealing with litt
 - [ ] Implement detailed Port Scanning of areas of interest
 - [ ] \(Optional) Add functionality to gather configuration of network devices via SSH
 - [ ] TBD
-
+[![Go Build and Test](https://github.com/fortifyde/netutil/actions/workflows/go.yml/badge.svg)](https://github.com/fortifyde/netutil/actions/workflows/go.yml)
 ## Demo Proof of Concept
 ![](https://github.com/fortifyde/netutil/blob/master/demo.gif)
 
