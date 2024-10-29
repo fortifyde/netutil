@@ -143,7 +143,7 @@ func StartWiresharkListening(app *tview.Application, pages *tview.Pages, mainVie
 		"-i", selectedInterface,
 		"-w", tsharkOutputFile,
 		"-n",
-		"-a", "duration:10",
+		"-a", "duration:600",
 		"-a", "filesize:5000000",
 	)
 	tsharkCmd.Stderr = io.Discard
