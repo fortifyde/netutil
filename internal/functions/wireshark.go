@@ -34,7 +34,7 @@ func StartWiresharkListening(app *tview.Application, pages *tview.Pages, mainVie
 	requiredBinaries := []string{"wireshark", "tshark"}
 	if !utils.CheckDependencies(requiredBinaries) {
 		msg := "Required binaries not found: " + strings.Join(requiredBinaries, ", ")
-		logger.Error(msg)
+		logger.Error("Required binaries not found: %s", strings.Join(requiredBinaries, ", "))
 		app.QueueUpdateDraw(func() {
 			uiutil.ShowError(app, pages, "requiredBinariesNotFoundModal", msg, mainView, nil)
 		})

@@ -90,7 +90,7 @@ func ConfigureNetworkInterfaces(app *tview.Application, pages *tview.Pages, main
 			return err
 		}
 		msg := fmt.Sprintf("Main interface automatically set to %s", availableInterfaces[0].Name)
-		logger.Info(msg)
+		logger.Info("Main interface automatically set to %s", availableInterfaces[0].Name)
 		uiutil.ShowMessage(app, pages, "mainInterfaceSetModal", msg, mainView)
 		return nil
 	}
@@ -112,8 +112,7 @@ func ConfigureNetworkInterfaces(app *tview.Application, pages *tview.Pages, main
 						fmt.Sprintf("Failed to set main interface: %v", err), mainView, nil)
 					return
 				}
-				msg := fmt.Sprintf("Main interface set to %s", availableInterfaces[index].Name)
-				logger.Info(msg)
+				logger.Info("Main interface set to " + availableInterfaces[index].Name)
 			}
 		},
 		mainView)
