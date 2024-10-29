@@ -88,6 +88,13 @@ func ShowMultiSelect(app *tview.Application, pages *tview.Pages,
 				0, 1, true).
 			AddItem(nil, 0, 1, false)
 
+		// Create a slice of focusable elements
+		focusElements := []tview.Primitive{list, submitButton, selectAllButton, cancelButton}
+		currentFocusIndex := 0
+
+		// Set initial focus
+		app.SetFocus(focusElements[currentFocusIndex])
+
 		// Modify input capture to handle only space key for selection
 		list.SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
 			switch event.Key() {
@@ -96,15 +103,9 @@ func ShowMultiSelect(app *tview.Application, pages *tview.Pages,
 				done()
 				return nil
 			case tcell.KeyTab:
-				if app.GetFocus() == list {
-					app.SetFocus(submitButton)
-				} else if app.GetFocus() == submitButton {
-					app.SetFocus(selectAllButton)
-				} else if app.GetFocus() == selectAllButton {
-					app.SetFocus(cancelButton)
-				} else {
-					app.SetFocus(list)
-				}
+				// Cycle through focusable elements
+				currentFocusIndex = (currentFocusIndex + 1) % len(focusElements)
+				app.SetFocus(focusElements[currentFocusIndex])
 				return nil
 			case tcell.KeyRune:
 				if event.Rune() == ' ' {
@@ -121,8 +122,20 @@ func ShowMultiSelect(app *tview.Application, pages *tview.Pages,
 			return event
 		})
 
+		// Set input capture for buttons to handle tab cycling
+		for _, button := range []tview.Primitive{submitButton, selectAllButton, cancelButton} {
+			button.(*tview.Button).SetInputCapture(func(event *tcell.EventKey) *tcell.EventKey {
+				if event.Key() == tcell.KeyTab {
+					// Cycle through focusable elements
+					currentFocusIndex = (currentFocusIndex + 1) % len(focusElements)
+					app.SetFocus(focusElements[currentFocusIndex])
+					return nil
+				}
+				return event
+			})
+		}
+
 		pages.AddPage(modalID, flex, true, true)
-		app.SetFocus(list)
 		SetFloatingBoxActive(true)
 	})
 }

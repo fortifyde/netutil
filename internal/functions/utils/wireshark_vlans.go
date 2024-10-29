@@ -1,58 +1,67 @@
 package utils
 
 import (
-	"bufio"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
-	"regexp"
-	"strings"
+	"sort"
 
 	"github.com/fortifyde/netutil/internal/functions/configuration"
 	"github.com/fortifyde/netutil/internal/logger"
 )
 
-// retrieves unique VLAN IDs from Wireshark capture files
+// VLANAnalysis represents the structure of the VLAN analysis JSON output
+type VLANAnalysis []struct {
+	VLANID string `json:"VLANID"`
+}
+
+// GetWiresharkVLANs reads the VLAN analysis results from the most recent Wireshark capture
 func GetWiresharkVLANs() ([]string, error) {
+	// Load config to get working directory
 	cfg, err := configuration.LoadConfig()
 	if err != nil {
 		return nil, fmt.Errorf("failed to load config: %v", err)
 	}
 
-	captureDir := filepath.Join(cfg.WorkingDirectory, "captures")
-	vlanMap := make(map[string]bool)
+	// Construct path to analysis directory
+	analysisDir := filepath.Join(cfg.WorkingDirectory, "Wireshark", "capture_analysis")
 
-	files, err := os.ReadDir(captureDir)
+	// Find the most recent VLAN analysis JSON file
+	matches, err := filepath.Glob(filepath.Join(analysisDir, "VLAN_IDs_*.json"))
 	if err != nil {
-		return nil, fmt.Errorf("failed to read captures directory: %v", err)
+		return nil, fmt.Errorf("failed to search for VLAN analysis files: %v", err)
 	}
 
-	vlanRegex := regexp.MustCompile(`VLAN ID: (\d+)`)
-
-	for _, file := range files {
-		if !strings.HasSuffix(file.Name(), ".txt") {
-			continue
-		}
-
-		f, err := os.Open(filepath.Join(captureDir, file.Name()))
-		if err != nil {
-			logger.Warning("Failed to open capture file %s: %v", file.Name(), err)
-			continue
-		}
-		defer f.Close()
-
-		scanner := bufio.NewScanner(f)
-		for scanner.Scan() {
-			matches := vlanRegex.FindStringSubmatch(scanner.Text())
-			if len(matches) > 1 {
-				vlanMap[matches[1]] = true
-			}
-		}
+	if len(matches) == 0 {
+		return nil, fmt.Errorf("no VLAN analysis files found")
 	}
 
-	var vlanIDs []string
-	for vlanID := range vlanMap {
-		vlanIDs = append(vlanIDs, vlanID)
+	// Sort files by modification time to get the most recent
+	sort.Slice(matches, func(i, j int) bool {
+		iInfo, _ := os.Stat(matches[i])
+		jInfo, _ := os.Stat(matches[j])
+		return iInfo.ModTime().After(jInfo.ModTime())
+	})
+
+	// Read the most recent file
+	data, err := os.ReadFile(matches[0])
+	if err != nil {
+		return nil, fmt.Errorf("failed to read VLAN analysis file: %v", err)
 	}
+
+	// Parse the JSON
+	var analysis VLANAnalysis
+	if err := json.Unmarshal(data, &analysis); err != nil {
+		return nil, fmt.Errorf("failed to parse VLAN analysis: %v", err)
+	}
+
+	// Convert the VLAN objects to strings
+	vlanIDs := make([]string, len(analysis))
+	for i, vlan := range analysis {
+		vlanIDs[i] = vlan.VLANID
+	}
+
+	logger.Info("Found %d VLANs in Wireshark analysis", len(vlanIDs))
 	return vlanIDs, nil
 }

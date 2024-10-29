@@ -3,6 +3,7 @@ package functions
 import (
 	"context"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -268,7 +269,18 @@ func startScanning(app *tview.Application, pages *tview.Pages, ctx context.Conte
 
 	// Define the working directory paths
 	workingDir := utils.GetWorkingDirectory()
-	hostfilesDir := filepath.Join(workingDir, "#Hostfiles", dirName)
+
+	// Check for existing hostfiles directory
+	entries, _ := os.ReadDir(workingDir)
+	hostfilesDirName := "Hostfiles"
+	for _, entry := range entries {
+		if entry.IsDir() && strings.Contains(strings.ToLower(entry.Name()), "hostfiles") {
+			hostfilesDirName = entry.Name()
+			break
+		}
+	}
+
+	hostfilesDir := filepath.Join(workingDir, hostfilesDirName, dirName)
 	scanDir := filepath.Join(hostfilesDir, "scans")
 
 	// Create directories

@@ -65,57 +65,73 @@ func ConfigureIPAddresses(interfaces []string, app *tview.Application, pages *tv
 		cfg.NetworkInterfaces = make(map[string]configuration.InterfaceState)
 	}
 
-	for _, iface := range interfaces {
-		// Prompt for IP address configuration
-		uiutil.PromptInput(app, pages, fmt.Sprintf("ipConfigModal-%s", iface),
-			fmt.Sprintf("Configure IP for %s", iface),
-			"Enter IP address with subnet mask (e.g., 192.168.1.1/24):",
-			mainView,
-			func(input string, err error) {
-				if err != nil {
-					return
-				}
-
-				// Validate IP address format
-				ip, ipNet, err := net.ParseCIDR(input)
-				if err != nil {
-					logger.Error("Invalid IP address format for %s: %v", iface, err)
-					uiutil.ShowError(app, pages, "invalidIPFormatModal",
-						"Invalid IP format. Please use CIDR notation (e.g., 192.168.1.1/24)",
-						mainView, nil)
-					return
-				}
-
-				// Apply IP configuration
-				err = applyIPConfig(iface, input)
-				if err != nil {
-					logger.Error("Failed to apply IP configuration for %s: %v", iface, err)
-					uiutil.ShowError(app, pages, "applyIPConfigErrorModal",
-						fmt.Sprintf("Failed to configure IP for %s: %v", iface, err),
-						mainView, nil)
-					return
-				}
-
-				// Update configuration
-				updateInterfaceConfig(cfg, iface, ip.String(), ipNet.String())
-				err = configuration.SaveConfig(cfg)
-				if err != nil {
-					logger.Error("Failed to save configuration: %v", err)
-					uiutil.ShowError(app, pages, "saveConfigErrorModal",
-						fmt.Sprintf("Failed to save configuration: %v", err),
-						mainView, nil)
-					return
-				}
-
-				logger.Info("Successfully configured IP %s for interface %s", input, iface)
-				uiutil.ShowMessage(app, pages, "ipConfigSuccessModal",
-					fmt.Sprintf("Successfully configured IP for %s", iface),
-					mainView)
-			},
-			"")
+	// Start with the first interface
+	if len(interfaces) > 0 {
+		configureInterface(interfaces, 0, cfg, app, pages, mainView)
 	}
 
 	return nil
+}
+
+// configureInterface handles the configuration of a single interface and chains to the next
+func configureInterface(interfaces []string, index int, cfg *configuration.Config, app *tview.Application, pages *tview.Pages, mainView tview.Primitive) {
+	if index >= len(interfaces) {
+		return
+	}
+
+	iface := interfaces[index]
+	uiutil.PromptInput(app, pages, fmt.Sprintf("ipConfigModal-%s", iface),
+		fmt.Sprintf("Configure IP for %s", iface),
+		"Enter IP address with subnet mask (e.g., 192.168.1.1/24):",
+		mainView,
+		func(input string, err error) {
+			if err != nil {
+				return
+			}
+
+			// Validate IP address format
+			ip, ipNet, err := net.ParseCIDR(input)
+			if err != nil {
+				logger.Error("Invalid IP address format for %s: %v", iface, err)
+				uiutil.ShowError(app, pages, "invalidIPFormatModal",
+					"Invalid IP format. Please use CIDR notation (e.g., 192.168.1.1/24)",
+					mainView, func() {
+						// Re-prompt for the same interface after error
+						configureInterface(interfaces, index, cfg, app, pages, mainView)
+					})
+				return
+			}
+
+			// Apply IP configuration
+			err = applyIPConfig(iface, input)
+			if err != nil {
+				logger.Error("Failed to apply IP configuration for %s: %v", iface, err)
+				uiutil.ShowError(app, pages, "applyIPConfigErrorModal",
+					fmt.Sprintf("Failed to configure IP for %s: %v", iface, err),
+					mainView, nil)
+				return
+			}
+
+			// Update configuration
+			updateInterfaceConfig(cfg, iface, ip.String(), ipNet.String())
+			err = configuration.SaveConfig(cfg)
+			if err != nil {
+				logger.Error("Failed to save configuration: %v", err)
+				uiutil.ShowError(app, pages, "saveConfigErrorModal",
+					fmt.Sprintf("Failed to save configuration: %v", err),
+					mainView, nil)
+				return
+			}
+
+			logger.Info("Successfully configured IP %s for interface %s", input, iface)
+			uiutil.ShowMessage(app, pages, "ipConfigSuccessModal",
+				fmt.Sprintf("Successfully configured IP for %s", iface),
+				mainView)
+
+			// Configure next interface
+			configureInterface(interfaces, index+1, cfg, app, pages, mainView)
+		},
+		"")
 }
 
 // applyIPConfig applies the IP configuration to the interface

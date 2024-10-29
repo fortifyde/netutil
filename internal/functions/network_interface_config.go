@@ -75,19 +75,24 @@ func configureVLANsFromWireshark(app *tview.Application, pages *tview.Pages, mai
 	if err != nil {
 		logger.Error("Failed to get VLANs from Wireshark: %v", err)
 		uiutil.ShowError(app, pages, "getWiresharkVLANsErrorModal",
-			fmt.Sprintf("Failed to get VLANs from Wireshark: %v", err),
+			"No Wireshark capture results found. Please run a capture first.",
 			mainView, nil)
 		return
 	}
 
 	if len(vlanIDs) == 0 {
 		uiutil.ShowMessage(app, pages, "noVLANsFoundModal",
-			"No VLANs found in Wireshark results",
+			"No VLANs found in the Wireshark capture results.",
 			mainView)
 		return
 	}
 
-	showVLANSelectionList(app, pages, mainInterface, vlanIDs, mainView)
+	// Convert VLAN IDs to strings for the multi-select UI
+	vlanStrings := make([]string, len(vlanIDs))
+	copy(vlanStrings, vlanIDs)
+
+	// Show VLAN selection dialog
+	showVLANSelectionList(app, pages, mainInterface, vlanStrings, mainView)
 }
 
 func configureVLANsManually(app *tview.Application, pages *tview.Pages, mainInterface string, mainView tview.Primitive) {
